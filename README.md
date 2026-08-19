@@ -35,6 +35,7 @@ Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页�
 - [MVP 方案](docs/方案.md)
 - [架构设计](docs/architecture.md)
 - [开源方案调研](docs/research/open-source-landscape.md)
+- [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)
 
 ## 当前交付方向
 

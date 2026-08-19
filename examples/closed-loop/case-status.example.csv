@@ -1,0 +1,3 @@
+run_id,case_id,browser_status,manual_required,last_execution_id,updated_at
+<run-id>,TC-01,pending,,,<ISO-8601>
+<run-id>,TC-02,pending,,,<ISO-8601>

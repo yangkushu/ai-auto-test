@@ -1,0 +1,11 @@
+# Local test credentials and machine-specific configuration
+*.local.md
+*.local.yaml
+*.local.yml
+
+# Browser execution results and evidence
+.ai-auto-test/
+
+# Common local noise
+.DS_Store
+Thumbs.db
