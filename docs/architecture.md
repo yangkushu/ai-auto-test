@@ -47,6 +47,13 @@ read-only test cases → Cursor orchestration Skill
 - `case_execution`：追加式历史，禁止覆盖；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
 
+文件编码约定：
+
+- `case-executions.jsonl`：UTF-8，无 BOM；
+- `summary.md`：UTF-8；
+- `case-status.csv`：UTF-8 BOM，确保 Windows Excel 可直接识别中文；
+- Windows PowerShell 读取文本时显式使用 `-Encoding UTF8`。
+
 ## Browser Preflight
 
 正式执行前必须验证：
@@ -70,6 +77,10 @@ read-only test cases → Cursor orchestration Skill
 ```
 
 先写执行记录再更新状态，避免状态存在但历史证据缺失。若进程在两次写入之间中断，可根据最后记录重建状态。
+
+恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
+
+若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 
 ## Browser 返回契约
 
@@ -109,10 +120,11 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 
 ## MVP 验收
 
-1. 能读取两条只读正流程用例；
-2. Preflight 能区分 Browser 平台故障和业务失败；
-3. 能逐条调用 Browser 并获得结构化结论；
-4. 每条完成后立即形成执行记录和当前状态；
-5. 失败重试不会覆盖旧记录；
-6. 中断后能从尚未完成的用例继续；
-7. 汇总能列出所有需要人工处理的用例。
+1. 已验证：读取外部只读正流程用例；
+2. 已验证：Preflight 能确认 Browser 可用，并识别工具注册故障；
+3. 已验证：逐条调用 Browser 并获得结构化结论；
+4. 已验证：每条完成后形成执行记录和当前状态；
+5. 已验证：复测追加新 attempt，不覆盖旧记录；
+6. 已验证：受控中断后从 pending 用例继续；
+7. 待验证：异常结论能正确进入人工处理清单；
+8. 待验证：突然崩溃后能自动重建状态。
