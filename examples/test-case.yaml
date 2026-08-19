@@ -1,0 +1,16 @@
+id: ORDER-001
+title: 已登录用户可提交普通订单
+account: normal-user
+preconditions:
+  - 测试账号可以正常登录
+  - 商品 A 有库存
+steps:
+  - index: 1
+    action: 使用 normal-user 登录测试系统
+    expected: 页面显示当前测试用户已登录
+  - index: 2
+    action: 打开商品 A 详情页并点击“立即购买”
+    expected: 页面进入订单确认流程并显示商品 A
+  - index: 3
+    action: 提交订单
+    expected: 页面显示下单成功，且订单状态为“待支付”
