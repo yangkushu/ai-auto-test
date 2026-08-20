@@ -1,4 +1,4 @@
 interface:
   display_name: "执行浏览器测试用例"
-  short_description: "Run Cursor Browser test cases with auditable results"
+  short_description: "通过 Cursor Browser 执行用例并保存可审计结果"
   default_prompt: "使用 $execute-test-cases 通过 Cursor 原生 Browser 执行测试用例、保存证据并校验结果记录。"

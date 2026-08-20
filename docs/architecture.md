@@ -56,7 +56,7 @@ read-only test cases → Cursor orchestration Skill
 
 ### 结果校验器
 
-`scripts/validate-run.mjs` 是独立于 Browser Agent 的确定性检查层，使用 Node.js 内置模块，不依赖模型判断。它在每批完成后检查：
+`scripts/validate-run.mjs` 是独立于 Browser Agent 的确定性检查层。`.mjs` 表示它是 Node.js ES Module。它只使用 Node.js 内置模块，不依赖 npm 第三方包，也不参与页面读取或浏览器操作。它在每批完成后检查：
 
 - 三个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
@@ -64,7 +64,7 @@ read-only test cases → Cursor orchestration Skill
 - 截图是否存在、非空并位于当前结果目录；
 - 输出是否可能泄露密码或验证码。
 
-校验器退出码为 `0` 才表示通过；CI 或正式使用建议增加 `--strict`，将 warning 也视为失败。它校验的是结果闭环完整性，不重新判断页面业务结论是否正确。
+校验器退出码为 `0` 才表示通过；CI 或正式使用建议增加 `--strict`，将 warning 也视为失败。它校验的是结果闭环完整性，不重新判断页面业务结论是否正确。仅执行 Browser 测试不要求 Node.js；需要这一确定性检查层或项目自测时才要求 Node.js 20 或更高版本。
 
 ## Browser Preflight
 

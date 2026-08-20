@@ -48,11 +48,13 @@ Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页�
 ```bash
 git clone git@github.com:yangkushu/ai-auto-test.git
 cd ai-auto-test
-npm test
 ```
 
-使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。运行 Browser 用例后使用以下命令校验结果：
+Browser 测试核心不依赖 Node.js，也不需要安装 npm 包。使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。
+
+如果需要运行确定性结果校验器或项目自测，则需要 Node.js 20 或更高版本：
 
 ```bash
 node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
+npm test
 ```

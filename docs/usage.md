@@ -42,6 +42,8 @@ Cursor 也支持在 `/` 菜单中直接搜索 `/execute-test-cases`。本 MVP �
 
 ## 3. 校验结果
 
+这一步需要 Node.js 20 或更高版本，但不需要安装 npm 第三方包：
+
 ```bash
 node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
 ```
@@ -53,6 +55,8 @@ npm run validate-run -- .ai-auto-test/results/<run-id> --strict
 ```
 
 输出 `VALIDATION PASSED` 且退出码为 0 才表示文件结构与跨表关系通过。`--strict` 会把 warning 也视为失败；机器消费时增加 `--json`。
+
+没有 Node.js 时不影响 Browser Agent 操作页面和生成结果文件，但缺少确定性的跨文件一致性检查。此时必须在 `summary.md` 和最终回复中注明“确定性结果校验未执行”。
 
 校验器检查：
 

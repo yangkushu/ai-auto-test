@@ -1,78 +1,78 @@
 ---
 name: execute-test-cases
-description: Execute existing positive-path web test cases with Cursor Agent Window's native Browser, persist auditable status, execution history, screenshots, and human follow-up items, and resume or retest without overwriting history. Use for Cursor-first browser testing when the user provides a test URL, read-only test cases, and dedicated test accounts. Do not use to modify application code or test production systems.
+description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正流程测试用例，保存可审计的当前状态、追加式执行历史、截图证据和人工处理清单，并支持不中断历史的恢复与复测。当用户提供测试环境 URL、只读测试用例和专用测试账号，并要求通过 Cursor 进行浏览器自动化测试时使用。不要用于修改应用代码或测试生产环境。
 ---
 
-# Execute Test Cases
+# 执行浏览器测试用例
 
-Use Cursor Agent Window's native Browser. Prefer the verified `/use-browser` entry. Do not install or silently substitute another browser tool.
+使用 Cursor Agent Window 原生 Browser，优先使用已验证的 `/use-browser` 入口。不要安装或静默替换为其他浏览器工具。
 
-## Keep scope narrow
+## 限制范围
 
-- Test only through the visible browser UI.
-- Treat source cases as read-only.
-- Do not read or modify application code, call internal APIs, access databases, or fix failures.
-- Use a test environment and dedicated accounts.
-- Execute every input case sequentially and treat cases as independent.
-- Never write passwords or verification codes to results.
+- 只通过可见浏览器 UI 测试。
+- 将源测试用例视为只读输入。
+- 不读取或修改应用代码，不调用内部 API，不访问数据库，不修复发现的问题。
+- 只使用测试环境和专用测试账号。
+- 顺序执行所有输入用例，并将每条用例视为相互独立。
+- 不在结果中写入密码或验证码。
 
-## Require inputs
+## 检查输入
 
-Obtain the environment URL, a case file containing IDs, accounts, preconditions, ordered steps and per-step expectations, and named test accounts with login methods.
+确认已提供环境 URL、测试用例文件和具名测试账号。每条用例应包含 ID、使用账号、前置条件、有序步骤和逐步预期。
 
-For SMS mock login marked `浏览器自动填入`, enter the phone number, request the code, and wait for the page to fill it. Mark the case `blocked` if it does not fill before timeout.
+短信 mock 登录标记为“浏览器自动填入”时，输入手机号并获取验证码，然后等待页面自动填入。超时仍未填入时将用例标记为 `blocked`。
 
-## Run Browser Preflight
+## 执行 Browser Preflight
 
-Open the target URL and confirm visible content can be read before executing cases. If Browser is unavailable, record the original error and mark the run `blocked`; do not mark business cases as failed.
+执行用例前打开目标 URL，确认能够读取可见页面内容。Browser 不可用时记录原始错误，并将整次运行标记为 `blocked`；不要把业务用例标记为失败。
 
-## Persist the run
+## 创建运行记录
 
-Create `.ai-auto-test/results/<run-id>/` with:
+创建 `.ai-auto-test/results/<run-id>/`，包含：
 
-- `case-status.csv`: current status projection;
-- `case-executions.jsonl`: append-only attempt history;
-- `summary.md`: run metadata, counts and human follow-up list;
-- screenshot evidence files.
+- `case-status.csv`：当前状态投影；
+- `case-executions.jsonl`：只追加的 attempt 历史；
+- `summary.md`：运行元数据、状态统计和人工处理清单；
+- 截图证据文件。
 
-Use UTF-8 without BOM for JSONL and Markdown, and UTF-8 BOM for CSV. Initialize every case as `pending` (`待测试`). Limit any extra filesystem permission to the current results directory.
+JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将每条用例初始化为 `pending`（待测试）。额外文件权限只能授予当前结果目录。
 
-## Execute one case at a time
+## 逐条执行用例
 
-For each `pending` or `retest_pending` case:
+对每条 `pending` 或 `retest_pending` 用例：
 
-1. Select the named account; reuse the session only when the case permits it.
-2. Establish preconditions only through the browser; otherwise return `blocked`.
-3. Follow steps in order and preserve business intent.
-4. Adapt only UI mechanics such as harmless popups, scrolling, waiting, or tab switching; record deviations.
-5. Verify every expectation from rendered content. A successful click is not sufficient evidence.
-6. Capture the final or abnormal page and persist the screenshot.
-7. Append a complete execution record before updating the status row.
-8. Update `last_execution_id`, status, `manual_required`, and time before continuing.
+1. 选择指定账号；仅在用例允许时复用登录会话。
+2. 只通过浏览器建立前置条件；无法建立时返回 `blocked`。
+3. 按顺序执行步骤，不改变业务意图。
+4. 只适应关闭无害弹窗、滚动、等待或切换标签页等 UI 机械细节，并记录偏差。
+5. 根据渲染后的可见内容验证每项预期；点击成功不能单独作为通过证据。
+6. 截取最终页面或异常页面，并将截图保存到结果目录。
+7. 先追加完整执行记录，再更新当前状态。
+8. 更新 `last_execution_id`、状态、`manual_required` 和时间，然后继续下一条。
 
-Use simple unique values only for explicitly open-ended positive-path data. Never change fixed amounts, roles, products, states, or expected results.
+仅当步骤明确允许自由取值时生成简单唯一值。不要改变固定金额、角色、商品、状态或预期结果。
 
-## Assign one verdict
+## 给出唯一结论
 
-- `passed` (`已通过`): every expectation was directly observed.
-- `failed` (`不通过`): visible behavior contradicted an expectation.
-- `blocked` (`测试受阻`): login, permission, environment, data, Browser, or another prerequisite prevented execution.
-- `inconclusive` (`无法判断`): execution occurred, but visible evidence was insufficient.
+- `passed`（已通过）：直接观察到所有预期。
+- `failed`（不通过）：可见行为与预期矛盾。
+- `blocked`（测试受阻）：登录、权限、环境、数据、Browser 或其他前置条件阻止执行。
+- `inconclusive`（无法判断）：已经执行，但可见证据不足以判断。
 
-Set `manual_required=false` only for `passed`; set it to `true` for every abnormal verdict. Never convert blocked or inconclusive into passed.
+仅对 `passed` 设置 `manual_required=false`；其他结论全部设置为 `true`。不要把 `blocked` 或 `inconclusive` 改判为通过。
 
-## Resume and retest
+## 恢复与复测
 
-Reuse the original run ID. Read status and history first, execute only `pending`/`retest_pending`, and never delete or change an existing JSONL line. Allocate the next attempt number and a unique execution ID. If status and history disagree after interruption, treat append-only execution history as the source for rebuilding status and record the repair.
+沿用原 run ID。先读取状态和历史，只执行 `pending`/`retest_pending`，禁止删除或修改已有 JSONL 行。分配下一个 attempt 和唯一 execution ID。中断后状态与历史不一致时，以追加式执行历史重建状态，并记录修复原因。
 
-## Finish and validate
+## 汇总并校验
 
-Write current verdict counts, every case's latest result, evidence references, screenshot hashes when available, and all abnormal cases in `人工处理清单`.
+在 `summary.md` 中记录当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。
 
-When `scripts/validate-run.mjs` exists in the workspace, run:
+工作区存在 `scripts/validate-run.mjs` 且 Node.js 可用时运行：
 
 ```text
 node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
 ```
 
-Do not report the run complete if validation errors remain. Report warnings and any evidence that could not be persisted.
+存在校验错误时不要宣布运行完成。Node.js 不可用时仍可完成 Browser 测试，但必须明确记录“确定性结果校验未执行”，不能声称校验通过。报告所有 warning 和未能持久化的证据。
