@@ -11,6 +11,13 @@ examples/closed-loop/run-config.example.md
 
 `*.local.md` 已被 Git 忽略。用例可以参考 `examples/closed-loop/test-cases.md`，每条至少包含 ID、账号、前置条件、有序步骤和逐步预期。
 
+运行配置中的 `mode` 支持：
+
+- `normal`：正常模式，记录恢复与审计所需的关键事件；
+- `development`：开发模式，额外记录步骤观察、UI 适应、截图和关键文件写入事件。
+
+未填写时默认 `normal`。本次 Prompt 中的 `mode=...` 优先于运行配置；恢复已有 run 时沿用原模式。
+
 ## 2. 启动测试
 
 在 Cursor Agent Window 中：
@@ -22,6 +29,7 @@ examples/closed-loop/run-config.example.md
 ```text
 使用 execute-test-cases Skill 执行以下测试：
 
+- 运行参数：mode=development
 - 运行配置：examples/closed-loop/run-config.local.md
 - 测试用例：examples/closed-loop/test-cases.md
 
@@ -34,6 +42,7 @@ Skill 默认输出：
 .ai-auto-test/results/<run-id>/
 ├── case-status.csv
 ├── case-executions.jsonl
+├── run-events.jsonl
 ├── summary.md
 └── *.png
 ```
@@ -47,12 +56,15 @@ Skill 会在结束前重新读取结果并检查：
 - 必需文件和 CSV 表头；
 - 状态值、时间和 `manual_required`；
 - JSONL 可解析性、唯一 execution ID 和连续 attempt；
+- 事件中的 Skill 版本、Schema 版本、run ID、模式和关键写入顺序；
 - 状态表是否指向最新执行；
 - summary 计数是否与状态表一致；
 - 截图路径是否越界、缺失或为空；
 - 常见密码/验证码字段是否误写入结果。
 
 自检结论写入 `summary.md`。发现不一致时，Agent 只能根据追加式执行历史重建状态和汇总，禁止修改旧执行记录；不能安全修复的项目进入人工处理清单。首版自检不依赖外部脚本，但也不等同于独立程序的确定性校验。
+
+当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。
 
 ## 4. 恢复与复测
 
@@ -68,3 +80,17 @@ Skill 会在结束前重新读取结果并检查：
 - JSONL、Markdown 使用 UTF-8，CSV 使用 UTF-8 BOM；
 - Windows PowerShell 读取时显式增加 `-Encoding UTF8`；
 - 截图复制到结果目录后记录相对路径，建议在 summary 中记录 SHA-256。
+
+## 6. 对比两个 Skill 版本
+
+分别使用旧版本和候选版本创建独立 run，禁止覆盖结果目录。对比时固定测试环境、用例文件、账号初始状态和 Cursor 版本，并均使用 `development` 模式。
+
+至少比较：
+
+- 最终结论和人工复核后的正确性；
+- `blocked`/`inconclusive` 是否合理；
+- 用例完成率、执行时间和中断位置；
+- execution、status、summary 是否一致；
+- 过程事件能否解释关键操作和写入顺序。
+
+每次对比在结论中明确列出 baseline 与 candidate 的 `skill_version` 和 run ID。

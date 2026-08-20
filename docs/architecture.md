@@ -16,6 +16,7 @@ read-only test cases → Cursor orchestration Skill
                          │
                          ├─ case_status（可更新）
                          ├─ case_execution（只追加）
+                         ├─ run_event（只追加）
                          └─ summary + 人工处理清单
 ```
 
@@ -29,6 +30,7 @@ read-only test cases → Cursor orchestration Skill
 - 每次只向 Browser 提交一条用例；
 - 校验 Browser 返回结果是否包含步骤观察和唯一结论；
 - 先追加执行记录，再更新当前状态；
+- 按运行模式追加关键或详细过程事件；
 - 生成批次汇总和人工处理清单。
 
 ### Browser 子 Agent
@@ -45,11 +47,13 @@ read-only test cases → Cursor orchestration Skill
 - `test_case`：只读输入；
 - `case_status`：当前结果投影，可更新；
 - `case_execution`：追加式历史，禁止覆盖；
+- `run_event`：追加式过程事件，用于观察、中断定位和恢复审计；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
 
 文件编码约定：
 
 - `case-executions.jsonl`：UTF-8，无 BOM；
+- `run-events.jsonl`：UTF-8，无 BOM；
 - `summary.md`：UTF-8；
 - `case-status.csv`：UTF-8 BOM，确保 Windows Excel 可直接识别中文；
 - Windows PowerShell 读取文本时显式使用 `-Encoding UTF8`。
@@ -58,13 +62,35 @@ read-only test cases → Cursor orchestration Skill
 
 首版不提供独立校验程序。主 Agent 在每批完成后重新读取结果文件并检查：
 
-- 三个结果文件是否存在且格式可解析；
+- 四个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
 - 异常结论是否进入人工处理；
 - 截图是否存在、非空并位于当前结果目录；
 - 输出是否可能泄露密码或验证码。
 
 自检结果写入 `summary.md`。它用于尽早发现明显的记录错误，但仍属于 Agent 判断，不能等同于独立程序的确定性校验。首版只依赖 Cursor；确定性校验器留到闭环稳定后再评估。
+
+### 运行模式与事件
+
+`mode` 只接受 `normal` 和 `development`。新运行按“Prompt 参数 > 运行配置 > normal”解析；恢复运行沿用原模式。模式不得改变浏览器操作、结论或人工处理规则。
+
+正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件。开发模式额外保留步骤观察、UI 适应、截图、关键写入前后和自检细节。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token 或内部推理。
+
+### 版本体系
+
+- Skill 版本：读取 `.agents/skills/execute-test-cases/VERSION`，使用 Semantic Versioning；
+- Schema 版本：当前为 `1`，表示已有业务结果结构；
+- run ID：唯一标识一次测试运行。
+
+每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
+
+版本升级规则：
+
+- MAJOR：状态语义、执行流程或结果契约发生不兼容变化；
+- MINOR：兼容增加运行模式、输入来源或测试能力；
+- PATCH：修复 Prompt、判定规则或文档，不改变兼容契约。
+
+`0.x` 阶段使用 `0.<功能版本>.<修订>`，开发候选依次使用 `-dev.N`、`-rc.N`。任何可能影响操作、判定或结果结构的修改都必须更新 Skill 版本和 Changelog。
 
 ## Browser Preflight
 
@@ -84,7 +110,9 @@ read-only test cases → Cursor orchestration Skill
   → Browser 执行
   → 校验返回结果
   → 追加 case_execution
+  → 追加 execution_appended 事件
   → 更新 case_status
+  → 追加 status_updated 事件
   → 继续下一条
 ```
 
@@ -140,7 +168,8 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 4. 已验证：每条完成后形成执行记录和当前状态；
 5. 已验证：复测追加新 attempt，不覆盖旧记录；
 6. 已验证：受控中断后从 pending 用例继续；
-7. 待验证：Agent 自检能稳定发现跨文件不一致；
-8. 待验证：真实页面的异常结论能正确进入人工处理清单；
-9. 待验证：突然崩溃后能自动重建状态；
-10. 后续评估：是否需要引入独立的确定性校验器。
+7. 已实现、待实测：mode 参数、开发模式、过程事件和版本落盘；
+8. 待验证：Agent 自检能稳定发现跨文件不一致；
+9. 待验证：真实页面的异常结论能正确进入人工处理清单；
+10. 待验证：突然崩溃后能自动重建状态；
+11. 后续评估：是否需要引入独立的确定性校验器。

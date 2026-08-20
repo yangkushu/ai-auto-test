@@ -109,12 +109,24 @@ Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离�
 
 首版只依赖 Cursor，不要求安装 Node.js、npm、Playwright 或额外 Browser MCP。此前实现过的 Node.js 确定性结果校验器不进入首版交付，相关实现仍可从 Git 历史恢复。首版由 Agent 在结束前重新读取 CSV、JSONL、summary 和证据目录完成最小一致性自检，并在 summary 中明确记录自检结果。
 
+## 当前开发版本
+
+`0.2.0-dev.1` 已在仓库中实现，但尚未完成 Cursor 实际运行验收。本版增加：
+
+- `mode=normal|development`，Prompt 参数优先于运行配置；
+- 正常模式关键事件和开发模式详细事件；
+- `run-events.jsonl` 追加式过程日志；
+- `skill_version`、`schema_version=1` 和生效模式落盘。
+
+这些能力只增加可观测性，不改变 Browser 操作、结论或人工处理规则。
+
 ## 下一里程碑
 
 验证异常结论和 Agent 结果自检：
 
 ```text
 构造可控的 failed / blocked / inconclusive 场景
+  → 先使用 development 模式验证过程事件和版本落盘
   → 检查 Browser 判定与人工队列
   → 由 Agent 重新读取并交叉检查 CSV / JSONL / summary
   → 模拟两次落盘之间的中断并重建状态

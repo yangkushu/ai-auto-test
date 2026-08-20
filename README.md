@@ -13,7 +13,7 @@ Cursor 主 Agent 调度
     ↓
 /use-browser 执行页面观察和操作
     ↓
-用例状态 + 追加式执行记录 + 证据
+用例状态 + 追加式执行记录 + 过程事件 + 证据
     ↓
 人工处理清单
 ```
@@ -24,10 +24,11 @@ Cursor 主 Agent 调度
 - AI 对每条用例给出 `passed`、`failed`、`blocked` 或 `inconclusive`，对外展示中文。
 - 是否需要人工处理由 Browser 结果决定；人工可以在结果出来后追加测试范围。
 - 测试用例只读；当前状态可更新；执行记录只追加、不覆盖。
+- 支持 `mode=normal|development`；开发模式增加过程日志，不改变测试行为和结论。
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。尚未验证的是异常结论的真实页面校准、突然崩溃恢复、多账号和批量运行。
+Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。当前开发版本为 `0.2.0-dev.1`，已加入运行模式、过程事件和版本标识，尚待 Cursor 实际运行验收。
 
 详见：
 
@@ -38,6 +39,7 @@ Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页�
 - [架构设计](docs/architecture.md)
 - [开源方案调研](docs/research/open-source-landscape.md)
 - [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)
+- [版本变更记录](CHANGELOG.md)
 
 ## 当前交付方向
 
@@ -51,3 +53,9 @@ cd ai-auto-test
 ```
 
 首版运行时只依赖 Cursor，不需要安装 Node.js、npm、Playwright 或额外 Browser MCP。使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。
+
+测试开发模式时，在 `/use-browser` 的任务正文中增加：
+
+```text
+mode=development
+```

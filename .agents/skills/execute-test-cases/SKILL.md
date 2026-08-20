@@ -22,9 +22,16 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 短信 mock 登录标记为“浏览器自动填入”时，输入手机号并获取验证码，然后等待页面自动填入。超时仍未填入时将用例标记为 `blocked`。
 
-## 执行 Browser Preflight
+## 解析运行参数
 
-执行用例前打开目标 URL，确认能够读取可见页面内容。Browser 不可用时记录原始错误，并将整次运行标记为 `blocked`；不要把业务用例标记为失败。
+从本次 Prompt 和运行配置中读取 `mode`，只接受：
+
+- `normal`：正常模式；
+- `development`：开发模式。
+
+新运行按“本次 Prompt 参数 > 运行配置 > `normal`”确定模式。参数形式为 `mode=development` 或 `mode=normal`。值非法时在启动 Browser 前停止，并列出合法值。恢复已有 run 时沿用 `summary.md` 中的原模式，不在中途切换。
+
+读取本 Skill 同目录的 `VERSION` 作为 `skill_version`，使用 `schema_version=1`。开始前回显并在 `summary.md` 中记录最终生效的运行模式、Skill 版本和结果 Schema 版本。
 
 ## 创建运行记录
 
@@ -32,10 +39,23 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 - `case-status.csv`：当前状态投影；
 - `case-executions.jsonl`：只追加的 attempt 历史；
+- `run-events.jsonl`：只追加的运行过程事件；
 - `summary.md`：运行元数据、状态统计和人工处理清单；
 - 截图证据文件。
 
 JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将每条用例初始化为 `pending`（待测试）。额外文件权限只能授予当前结果目录。
+
+每条事件至少包含 `time`、`skill_version`、`schema_version`、`run_id`、`mode` 和 `event`，可按需增加 `case_id`、`attempt`、`step_index`、`execution_id`、`status`、`message`。每行必须是独立有效的 JSON，写入后禁止修改。事件内容必须脱敏，不记录凭据、Cookie、Token、完整请求头或 Agent 内部推理。
+
+两种模式都记录 `run_started`、Preflight 结论、`case_started`、`execution_appended`、`status_updated`、`self_check_finished`、`run_finished` 以及 warning/error。
+
+`development` 额外记录 `preflight_started`、`step_started`、`step_observed`、`ui_adaptation`、`screenshot_saved`、关键文件的 `write_started`/`write_completed`、`self_check_started`/`self_check_detail` 和恢复依据。开发模式只能增加可观测信息，不得改变操作、结论或人工处理规则。
+
+先追加 `run_started`，再启动 Browser。
+
+## 执行 Browser Preflight
+
+打开目标 URL，确认能够读取可见页面内容。Browser 不可用时记录原始错误，追加 `preflight_failed` 和 `run_finished`，在 summary 中将整次运行标记为 `blocked`；不要把业务用例标记为失败。成功时追加 `preflight_passed`，再执行业务用例。
 
 ## 逐条执行用例
 
@@ -47,8 +67,10 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 4. 只适应关闭无害弹窗、滚动、等待或切换标签页等 UI 机械细节，并记录偏差。
 5. 根据渲染后的可见内容验证每项预期；点击成功不能单独作为通过证据。
 6. 截取最终页面或异常页面，并将截图保存到结果目录。
-7. 先追加完整执行记录，再更新当前状态。
-8. 更新 `last_execution_id`、状态、`manual_required` 和时间，然后继续下一条。
+7. 按当前模式追加所需过程事件。
+8. 先追加完整执行记录，再追加 `execution_appended` 事件。
+9. 更新 `last_execution_id`、状态、`manual_required` 和时间，再追加 `status_updated` 事件。
+10. 继续下一条用例。
 
 仅当步骤明确允许自由取值时生成简单唯一值。不要改变固定金额、角色、商品、状态或预期结果。
 
@@ -67,9 +89,9 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 
 ## 汇总并自检
 
-在 `summary.md` 中记录当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。
+在 `summary.md` 中记录 `skill_version`、`schema_version`、`run_id`、`mode`、Cursor 版本、用例来源、当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。
 
-完成前重新读取三个结果文件和证据目录，逐项检查：
+完成前重新读取四个结果文件和证据目录，逐项检查：
 
 - 每条输入用例在状态表中恰好出现一次；
 - 每个完成状态都指向该用例最新的 execution ID；
@@ -77,6 +99,8 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 - 状态表与最新执行结论一致；
 - `failed`、`blocked`、`inconclusive` 均设置 `manual_required=true`；
 - summary 状态计数与状态表一致；
+- `run-events.jsonl` 每行是有效 JSON，且版本、run ID 和模式一致；
+- 每个完成用例都能找到 `execution_appended` 和其后的 `status_updated`；
 - 引用的截图位于当前结果目录并实际存在；
 - 结果文件不包含密码或验证码。
 

@@ -5,6 +5,7 @@
 | 配置项 | 值 |
 |---|---|
 | 测试环境 URL | `http://localhost:5174/admin/stores` |
+| mode | `normal` |
 | Browser 入口 | `/use-browser` |
 | 默认超时 | 30 秒 |
 | 单条用例最长时间 | 5 分钟 |
@@ -25,3 +26,4 @@
 - 不调用内部 API，不访问数据库；
 - 不新增、修改或删除业务数据；
 - 不在结果文件中记录密码或验证码。
+- 调试 Skill 时可将 `mode` 改为 `development`；未填写时默认为 `normal`。
