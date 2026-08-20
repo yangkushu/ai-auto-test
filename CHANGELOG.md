@@ -1,5 +1,15 @@
 # 版本变更记录
 
+## 0.2.0-dev.3 - 2026-08-20
+
+- 将 `execute-test-cases` 设为唯一用户入口，由 Skill 内部调用 Cursor Browser；
+- 在创建 run 前拒绝无效路径、占位值、无效 URL 和未定义账号；
+- Preflight 增加应用健康与成功标志检查，503 等错误页不再进入业务执行；
+- 增加 Go 标准库实现的跨平台 `ai-auto-test-store`，确定性追加和校验 JSONL；
+- Preflight 失败时保留全部用例为 `pending`，支持环境恢复后继续。
+- 增加 GitHub Actions 六平台构建、交付校验和 tag Release；
+- 增加 GitHub Skill 导入、自然语言代装、安装验收和分发架构文档。
+
 ## 0.2.0-dev.2 - 2026-08-20
 
 - 在执行前和追加前检查 execution ID 与“用例 ID + attempt”唯一性；

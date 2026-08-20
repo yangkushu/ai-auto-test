@@ -6,7 +6,8 @@
 |---|---|
 | 测试环境 URL | `http://localhost:5174/admin/stores` |
 | mode | `normal` |
-| Browser 入口 | `/use-browser` |
+| Preflight 成功标志 | `营销活动系统`、`安全登录总后台`、`门店管理` |
+| 允许复用已有会话 | 否 |
 | 默认超时 | 30 秒 |
 | 单条用例最长时间 | 5 分钟 |
 | 允许新增数据 | 否 |

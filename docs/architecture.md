@@ -2,7 +2,7 @@
 
 ## 总体
 
-MVP 是 Cursor-first 的测试编排 Skill，不自研浏览器驱动。Cursor 主 Agent 负责读取用例、控制执行顺序和写入结果；Browser 子 Agent 通过 `/use-browser` 负责可见页面的观察与操作。
+MVP 是 Cursor-first 的测试编排 Skill，不自研浏览器驱动。用户直接调用 `execute-test-cases`；Skill 负责读取用例和控制顺序，在内部调用 Cursor 原生 Browser，并使用随包交付的 CLI 写入关键结果。
 
 ```text
 run config ───────────────┐
@@ -11,12 +11,13 @@ read-only test cases → Cursor orchestration Skill
                          │
                          ├─ Browser Preflight
                          │
-                         ├─ /use-browser executor
+                         ├─ Cursor native Browser
                          │       └─ step observations + verdict + evidence
                          │
                          ├─ case_status（可更新）
-                         ├─ case_execution（只追加）
-                         ├─ run_event（只追加）
+                         ├─ ai-auto-test-store
+                         │       ├─ case_execution（只追加）
+                         │       └─ run_event（只追加）
                          └─ summary + 人工处理清单
 ```
 
@@ -29,7 +30,7 @@ read-only test cases → Cursor orchestration Skill
 - 读取尚未完成的用例；
 - 每次只向 Browser 提交一条用例；
 - 校验 Browser 返回结果是否包含步骤观察和唯一结论；
-- 先追加执行记录，再更新当前状态；
+- 通过结果写入器先追加执行记录，再更新当前状态；
 - 按运行模式追加关键或详细过程事件；
 - 生成批次汇总和人工处理清单。
 
@@ -50,6 +51,16 @@ read-only test cases → Cursor orchestration Skill
 - `run_event`：追加式过程事件，用于观察、中断定位和恢复审计；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
 
+`ai-auto-test-store` 使用 Go 标准库实现并随 Skill 提供编译后的平台可执行文件。它负责初始化空 JSONL、单对象压缩、UTF-8 无 BOM 追加、即时复验，以及 execution ID/attempt 唯一性；不读取测试账号，不操作 Browser，也不改变业务结论。最终使用者无需安装 Go 或其他语言运行时。
+
+## 构建与分发架构
+
+运行架构与构建架构分离：Cursor 和静态 CLI 属于用户运行时；Go、shell 构建脚本和 GitHub Actions 只属于维护者侧。CI 在 Linux runner 上使用 Go 交叉编译 Windows、Linux、macOS 的 x64/ARM64 六个目标，因此 CI 使用 shell 不会给最终用户引入 shell 或 PowerShell 依赖。
+
+仓库中的 `.agents/skills/execute-test-cases/` 是 Cursor GitHub 导入所需的完整交付单元，包含六个平台二进制。每次 push 都重新构建和检查；版本 tag 还会生成不可变 GitHub Release、完整 Skill ZIP、独立平台文件和 SHA-256 清单。
+
+安装采用两级策略：MVP 使用 Cursor 官方 GitHub Skill 导入或本地 `.agents/skills/` 发现；稳定后增加 Agent Plugin/Cursor Marketplace 作为一键安装与更新通道。自由文本要求 Agent 安装 URL 只能触发这个流程，不能取代安装后的目录、版本和 Skill 发现校验。完整设计见[构建、分发与安装设计](distribution.md)。
+
 文件编码约定：
 
 - `case-executions.jsonl`：UTF-8，无 BOM；
@@ -60,7 +71,7 @@ read-only test cases → Cursor orchestration Skill
 
 ### 结果自检
 
-首版不提供独立校验程序。主 Agent 在每批完成后重新读取结果文件并检查：
+主 Agent 在每批完成后先调用 `ai-auto-test-store validate-jsonl`，再重新读取结果文件并检查：
 
 - 四个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
@@ -68,7 +79,7 @@ read-only test cases → Cursor orchestration Skill
 - 截图是否存在、非空并位于当前结果目录；
 - 输出是否可能泄露密码或验证码。
 
-自检结果写入 `summary.md`。它用于尽早发现明显的记录错误，但仍属于 Agent 判断，不能等同于独立程序的确定性校验。首版只依赖 Cursor；确定性校验器留到闭环稳定后再评估。
+自检结果写入 `summary.md`。JSONL 语法、编码和 execution 唯一性由 CLI 确定性检查；状态投影、步骤语义、证据和 summary 的跨文件判断仍由 Agent 完成，不能把整套自检描述成完全确定性校验。
 
 ### 运行模式与事件
 
@@ -96,11 +107,12 @@ read-only test cases → Cursor orchestration Skill
 
 正式执行前必须验证：
 
-1. `/use-browser` 能启动；
+1. Skill 能在内部启动 Cursor 原生 Browser；
 2. 目标 URL 能打开；
-3. Agent 能读取页面标题或主要可见内容。
+3. 页面不是连接失败、4xx/5xx 或反向代理错误页；
+4. 页面能匹配配置的成功标志，或识别出明确的登录/应用界面。
 
-若出现 `cursor-ide-browser not found` 等工具注册错误，整次运行标记为 `blocked`，不得给任何业务用例写入 `failed`。
+若出现 `cursor-ide-browser not found` 等工具注册错误、503 等服务错误页或成功标志不匹配，整次运行标记为 `blocked`。所有业务用例保持 `pending`，不得创建业务 execution；环境恢复后沿用 run ID 继续。
 
 ## 单条用例事务顺序
 
@@ -109,8 +121,8 @@ read-only test cases → Cursor orchestration Skill
   → 创建 attempt
   → Browser 执行
   → 校验返回结果
-  → 追加前唯一性检查
-  → 追加 case_execution
+  → ai-auto-test-store 候选校验
+  → CLI 追加 case_execution 并即时复验
   → 追加 execution_appended 事件
   → 更新 case_status
   → 追加 status_updated 事件
@@ -174,4 +186,6 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 8. 已发现、待回归：Agent 能发现重复 execution ID，但旧版未使无效 run 失败；
 9. 已实测、待校准：真实页面异常能进入人工清单，但目标控件缺失存在误判为 `blocked` 的风险；
 10. 待验证：突然崩溃后能自动重建状态；
-11. 后续评估：是否需要引入独立的确定性校验器。
+11. 后续评估：是否需要把当前 JSONL CLI 扩展为完整的跨文件确定性校验器。
+12. 待验证：从 GitHub Remote Rule 导入完整 Skill 后，Windows x64 能发现 Skill 并执行随包 CLI；
+13. 已实现、待线上验收：GitHub Actions 六平台构建和 tag Release。

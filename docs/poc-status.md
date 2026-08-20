@@ -84,12 +84,12 @@ Available servers: cursor-app-control
 
 此时普通提示词和 `/use-browser` 都无法启动 Browser。重新安装 Cursor 后能力恢复。因此 MVP 必须在正式执行前增加 Browser Preflight，并把这类问题标记为运行级 `blocked`，不能误判为业务用例失败。
 
-建议的 Preflight：
+历史验证后的 Preflight 原则（当前已改为由 Skill 内部执行）：
 
-1. 启动 `/use-browser`；
+1. 由 `execute-test-cases` 启动 Cursor 原生 Browser；
 2. 打开一个明确的目标 URL；
-3. 确认 Agent 能读取页面标题或主要可见内容；
-4. 成功后才创建并执行测试批次；
+3. 确认页面不是连接失败、4xx/5xx 或反向代理错误页，并匹配应用成功标志；
+4. 成功后才执行业务用例；
 5. 失败时记录 Cursor 版本、原始错误和时间，不执行用例。
 
 Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离。闭环运行中，截图复制和结果追加需要申请结果目录写权限。执行器必须把授权限制在当前结果目录，禁止扩大到待测项目代码或其他目录。
@@ -121,30 +121,27 @@ Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离�
 
 ## 首版依赖决策
 
-首版只依赖 Cursor，不要求安装 Node.js、npm、Playwright 或额外 Browser MCP。此前实现过的 Node.js 确定性结果校验器不进入首版交付，相关实现仍可从 Git 历史恢复。首版由 Agent 在结束前重新读取 CSV、JSONL、summary 和证据目录完成最小一致性自检，并在 summary 中明确记录自检结果。
+首版不要求安装 Go、Python、Node.js、npm、Playwright 或额外 Browser MCP。`0.2.0-dev.3` 起随 Skill 交付 Go 标准库编译的 `ai-auto-test-store`，确定性处理 JSONL；Agent 继续负责业务判定和跨文件自检。
 
 ## 当前开发版本
 
-当前候选版本为 `0.2.0-dev.2`。`0.2.0-dev.1` 已完成上述 Cursor 实测；新版本在其基础上增加：
+`0.2.0-dev.2` 回归通过 `/execute-test-cases` 直接启动，证明 Skill 能内部调用 Browser，并正确阻止重复 execution、将损坏 run 标记为 `run_valid=false`。本轮同时发现：
 
-- execution ID 与“用例 ID + attempt”的执行前、追加前双重检查；
-- `self_check`、`run_valid` 以及硬失败的运行级语义；
-- 来源步骤与步骤事件一一对应；
-- 脱敏的 Browser action 前后事件；
-- 更严格的 `failed`、`blocked`、`inconclusive` 判定边界。
+- 503 页面仅因标题可读而通过 Preflight，随后三条用例被逐条标记 `blocked`；
+- 账号配置仍是占位路径，但输入校验没有停止；
+- `run-events.jsonl` 出现多个对象同一行及无效片段，自检虽发现错误但无法阻止写坏。
 
-本版不增加浏览器能力或外部依赖；它同时收紧结果完整性和状态判定，并增强开发过程的可观测性。
+当前候选版本为 `0.2.0-dev.3`，针对上述问题增加严格输入校验、健康 Preflight 和编译型 JSONL 写入器。它不增加浏览器能力，也不要求最终使用者安装语言运行时。
 
 ## 下一里程碑
 
-对照验证 `0.2.0-dev.2`：
+对照验证 `0.2.0-dev.3`：
 
 ```text
-复用固定的少量用例与初始数据
-  → 使用 development 模式验证逐步骤和 Browser action 事件
-  → 检查 execution 与 attempt 唯一性
-  → 检查 failed / blocked / inconclusive 边界
-  → 验证自检硬失败会令 run_valid=false
+先使用无效占位配置，确认启动前拒绝
+  → 使用 503 页面，确认 run blocked 且用例保持 pending
+  → 环境健康后恢复同一 run
+  → 检查 CLI 写入、execution 唯一性和逐步骤事件
   → 模拟两次落盘之间的中断并重建状态
 ```
 

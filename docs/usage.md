@@ -23,7 +23,7 @@ examples/closed-loop/run-config.example.md
 在 Cursor Agent Window 中：
 
 1. 确认 `Customize → Skills` 可见 `execute-test-cases`；
-2. 在输入框选择 `/use-browser`；
+2. 在输入框选择 `/execute-test-cases`；如果菜单未显示，则在 Prompt 中明确要求使用项目的 `execute-test-cases` Skill；
 3. 提交：
 
 ```text
@@ -47,11 +47,11 @@ Skill 默认输出：
 └── *.png
 ```
 
-Cursor 也支持在 `/` 菜单中直接搜索 `/execute-test-cases`。本 MVP 需要同时进入原生 Browser，因此当前推荐保留已经验证过的 `/use-browser` 入口，并在任务正文中明确写出 `execute-test-cases`；Skill 会根据描述自动匹配。
+Browser 由 Skill 内部调用。不要手动选择 `/use-browser`；否则只能验证 Cursor Browser，不能证明本 Skill 的编排、状态和审计逻辑生效。
 
 ## 3. 检查结果
 
-Skill 会在结束前重新读取结果并检查：
+Skill 使用随包交付的 `ai-auto-test-store` 初始化、写入和校验两个 JSONL，再执行跨文件检查：
 
 - 必需文件和 CSV 表头；
 - 状态值、时间和 `manual_required`；
@@ -64,7 +64,7 @@ Skill 会在结束前重新读取结果并检查：
 - 截图路径是否越界、缺失或为空；
 - 常见密码/验证码字段是否误写入结果。
 
-自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。首版自检不依赖外部脚本，也不等同于独立程序的确定性校验。
+自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。CLI 校验失败、execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。
 
 当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。
 
@@ -81,6 +81,7 @@ Skill 会在结束前重新读取结果并检查：
 
 - 只允许 Cursor 写入当前结果目录，不授权修改待测项目代码；
 - JSONL、Markdown 使用 UTF-8，CSV 使用 UTF-8 BOM；
+- JSONL 禁止直接编辑，只能由随 Skill 交付的 CLI 追加和校验；
 - Windows PowerShell 读取时显式增加 `-Encoding UTF8`；
 - 截图复制到结果目录后记录相对路径，建议在 summary 中记录 SHA-256。
 

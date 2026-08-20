@@ -11,7 +11,7 @@
     ↓
 Cursor 主 Agent 调度
     ↓
-/use-browser 执行页面观察和操作
+Skill 内部调用 Cursor 原生 Browser
     ↓
 用例状态 + 追加式执行记录 + 过程事件 + 证据
     ↓
@@ -28,7 +28,7 @@ Cursor 主 Agent 调度
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。当前开发版本为 `0.2.0-dev.2`，在开发日志实测基础上增加执行 ID 写入屏障、run 有效性、逐步骤记录和脱敏 Browser action 事件，等待 Cursor 对照验证。
+Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.3`：增加严格输入校验、应用健康 Preflight，以及跨平台编译型结果写入器，修复 503 被当作 Preflight 成功和 JSONL 被 Agent 拼坏的问题。
 
 详见：
 
@@ -37,24 +37,28 @@ Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页�
 - [当前 PoC 状态](docs/poc-status.md)
 - [MVP 方案](docs/方案.md)
 - [架构设计](docs/architecture.md)
+- [构建、分发与安装设计](docs/distribution.md)
 - [开源方案调研](docs/research/open-source-landscape.md)
 - [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)
 - [版本变更记录](CHANGELOG.md)
 
 ## 当前交付方向
 
-首版优先交付 Cursor Skill、输入模板和结果格式，不先开发 Plugin，也不自研浏览器驱动。跑通完整闭环后，再评估 Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
+首版优先交付 Cursor Skill、跨平台静态结果写入器、输入模板和结果格式，不自研浏览器驱动。GitHub Actions 负责测试、六平台交叉编译和 tag Release；最终使用者不安装语言运行时。跑通完整闭环后，再评估 Cursor/Agent Plugin、Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
 
 ## 快速开始
 
-```bash
-git clone git@github.com:yangkushu/ai-auto-test.git
-cd ai-auto-test
+在 Cursor 中打开 `Customize → Rules → Add Rule → Remote Rule (Github)`，导入：
+
+```text
+https://github.com/yangkushu/ai-auto-test
 ```
 
-首版运行时只依赖 Cursor，不需要安装 Node.js、npm、Playwright 或额外 Browser MCP。使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。
+也可以克隆仓库后用 Cursor 打开，或把完整的 `.agents/skills/execute-test-cases/` 复制到用户级 `~/.agents/skills/`。不要只复制 `SKILL.md`，因为 Skill 还需要随包交付的平台二进制。完整步骤和安装验收见[安装说明](docs/installation.md)，需要让 Agent 代办时可使用[安装提示词](prompts/cursor-install-skill.md)。
 
-测试开发模式时，在 `/use-browser` 的任务正文中增加：
+首版运行时只依赖 Cursor 和随 Skill 交付的 `ai-auto-test-store` 可执行文件，不需要安装 Go、Python、Node.js、npm、Playwright 或额外 Browser MCP。
+
+测试开发模式时，直接选择 `/execute-test-cases`，或明确要求使用该 Skill，并提供：
 
 ```text
 mode=development

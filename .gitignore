@@ -9,3 +9,6 @@
 # Common local noise
 .DS_Store
 Thumbs.db
+
+# Locally generated release assets
+dist/

@@ -1,0 +1,75 @@
+name: CI and Release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Test
+        run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build all supported targets
+        run: ./scripts/build-result-store.sh
+
+      - name: Reject stale bundled binaries
+        run: git diff --exit-code -- .agents/skills/execute-test-cases/bin
+
+      - name: Verify bundled result store
+        run: ./scripts/verify-result-store-dist.sh
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Verify tag and build release assets
+        run: |
+          version=$(tr -d '\r\n' < .agents/skills/execute-test-cases/VERSION)
+          test "$GITHUB_REF_NAME" = "v$version"
+          ./scripts/build-result-store.sh
+          ./scripts/verify-result-store-dist.sh
+          ./scripts/package-release.sh
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(tr -d '\r\n' < .agents/skills/execute-test-cases/VERSION)
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/v$version"/* \
+            --verify-tag \
+            --generate-notes \
+            --title "$GITHUB_REF_NAME"

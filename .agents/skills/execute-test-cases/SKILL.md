@@ -5,7 +5,7 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 # 执行浏览器测试用例
 
-使用 Cursor Agent Window 原生 Browser，优先使用已验证的 `/use-browser` 入口。不要安装或静默替换为其他浏览器工具。
+将本 Skill 作为唯一入口，从 `/execute-test-cases` 或明确要求使用 `execute-test-cases` 的 Prompt 启动。由 Skill 内部调用 Cursor Agent Window 原生 Browser；不要要求用户手动选择 `/use-browser`，也不要安装或静默替换为其他浏览器工具。
 
 ## 限制范围
 
@@ -20,6 +20,15 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 确认已提供环境 URL、测试用例文件和具名测试账号。每条用例应包含 ID、使用账号、前置条件、有序步骤和逐步预期。
 
+在创建 run 或启动 Browser 前完成严格校验：
+
+- URL 必须是完整的 `http://` 或 `https://` 地址；配置文件和用例文件必须存在且可读；
+- 拒绝空值以及 `<...>`、`TODO`、`待填写`、`填写路径` 等占位内容；
+- 每条选中用例引用的账号必须在配置中定义；账号密码登录必须有用户名和密码，除非配置明确允许复用已有会话；
+- 配置了 Preflight 成功标志时必须读取为非占位文本。
+
+输入无效时列出缺失或无效字段并停止：不创建 run、不启动 Browser，也不从用例内容猜测账号配置。
+
 短信 mock 登录标记为“浏览器自动填入”时，输入手机号并获取验证码，然后等待页面自动填入。超时仍未填入时将用例标记为 `blocked`。
 
 ## 解析运行参数
@@ -33,6 +42,8 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 读取本 Skill 同目录的 `VERSION` 作为 `skill_version`，使用 `schema_version=1`。开始前回显并在 `summary.md` 中记录最终生效的运行模式、Skill 版本和结果 Schema 版本。
 
+根据 Cursor 所在平台选择本 Skill `bin/ai-auto-test-store-<os>-<arch>[.exe]`。运行其 `version` 命令，要求输出版本与 `skill_version` 一致；缺失、无法执行或版本不一致时在启动 Browser 前停止。使用者不需要安装 Go、Python、Node.js 或 PowerShell。
+
 ## 创建运行记录
 
 创建 `.ai-auto-test/results/<run-id>/`，包含：
@@ -45,11 +56,22 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将每条用例初始化为 `pending`（待测试）。额外文件权限只能授予当前结果目录。
 
+所有 `run-events.jsonl` 和 `case-executions.jsonl` 写入必须调用随 Skill 交付的 CLI，禁止使用文件编辑工具、shell 重定向或自行拼接文本直接写这两个文件：
+
+```text
+ai-auto-test-store init-jsonl --file <path> --kind events|executions
+ai-auto-test-store append-jsonl --file <path> --kind events|executions --json <单个 JSON 对象>
+ai-auto-test-store append-jsonl --file <path> --kind events|executions --json-file <单对象临时文件>
+ai-auto-test-store validate-jsonl --file <path> --kind events|executions
+```
+
+创建结果目录后，先分别调用 `init-jsonl --kind events|executions` 创建两个空 JSONL，再追加 `run_started`。一次 append 命令只能提交一个 JSON 对象。较大的 execution 可以先写入当前结果目录中的单对象临时 JSON，再通过 `--json-file` 提交；成功后删除该明确的临时文件。CLI 会先校验已有文件与候选内容，再以 UTF-8 无 BOM 的单行 JSON 追加并立即复验；`executions` 还会在写入前拒绝重复 execution ID 和重复的“用例 ID + attempt”。任何 `ok=false` 或非零退出码都必须停止后续 JSONL 写入并进入失败自检，不得退回直接写文件。
+
 每条事件至少包含 `time`、`skill_version`、`schema_version`、`run_id`、`mode` 和 `event`，可按需增加 `case_id`、`attempt`、`step_index`、`execution_id`、`status`、`message`。每行必须是独立有效的 JSON，写入后禁止修改。事件内容必须脱敏，不记录凭据、Cookie、Token、完整请求头或 Agent 内部推理。
 
 两种模式都记录 `run_started`、Preflight 结论、`case_started`、`execution_appended`、`status_updated`、`self_check_finished`、`run_finished` 以及 warning/error。
 
-`development` 额外记录 `preflight_started`、`step_started`、`browser_action_started`、`browser_action_finished`、`step_observed`、`ui_adaptation`、`screenshot_saved`、关键文件的 `write_started`/`write_completed`、`self_check_started`/`self_check_detail` 和恢复依据。开发模式只能增加可观测信息，不得改变操作、结论或人工处理规则。
+`development` 额外记录 `preflight_started`、`step_started`、`browser_action_started`、`browser_action_finished`、`step_observed`、`ui_adaptation`、`screenshot_saved`、关键业务结果文件的 `write_started`/`write_completed`、`self_check_started`/`self_check_detail` 和恢复依据。不要为向 `run-events.jsonl` 追加事件本身再生成 write 事件，避免递归日志。开发模式只能增加可观测信息，不得改变操作、结论或人工处理规则。
 
 每条实际开始执行的来源用例步骤必须原样保留编号，并且恰好对应一组 `step_started` 和 `step_observed`；不得把多条来源步骤压缩成一条汇总步骤。`passed` 必须覆盖全部来源步骤；因前置条件提前 `blocked` 时可以没有业务步骤事件，但必须记录阻塞原因。一个步骤可以包含多个 Browser action。每次真实调用 Browser 前后分别追加：
 
@@ -63,7 +85,13 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 
 ## 执行 Browser Preflight
 
-打开目标 URL，确认能够读取可见页面内容。Browser 不可用时记录原始错误，追加 `preflight_failed` 和 `run_finished`，在 summary 中将整次运行标记为 `blocked`；不要把业务用例标记为失败。成功时追加 `preflight_passed`，再执行业务用例。
+打开目标 URL，确认 Browser 能读取健康的应用页面，而不只是读取到任意标题。满足以下条件才追加 `preflight_passed`：
+
+- 导航成功且能读取主要可见内容；
+- 页面不是浏览器错误页、连接失败页、4xx/5xx、`Service Unavailable`、`Bad Gateway`、`Gateway Timeout`、`Internal Server Error` 或同类服务错误页；
+- 配置了 Preflight 成功标志时，页面可见内容至少匹配一个标志；未配置时至少能识别登录表单、应用导航、主标题或其他明确的应用界面。
+
+Browser 不可用、导航失败、应用错误页或成功标志不匹配时追加 `preflight_failed`，不执行业务用例。所有用例保持 `pending`，不得创建 `case_started`、case execution 或 `status_updated`。完成 JSONL 自检后写入 `run_state=blocked`；记录完整时使用 `self_check=passed`、`run_valid=true`，并把环境问题放入运行级人工处理清单。环境恢复后可沿用该 run ID 从 pending 继续。
 
 ## 逐条执行用例
 
@@ -78,7 +106,7 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 7. 根据渲染后的可见内容验证每项预期；点击成功不能单独作为通过证据。
 8. 截取最终页面或异常页面，并将截图保存到结果目录。
 9. 追加执行记录前再次读取执行历史，确认 execution ID 和“用例 ID + attempt”仍然唯一。若冲突，不得追加，记录 `integrity_error`，停止新的业务执行并进入失败自检。
-10. 先追加完整执行记录，再追加 `execution_appended` 事件。
+10. 通过 `ai-auto-test-store append-jsonl --kind executions` 追加完整执行记录，再通过 `append-jsonl --kind events` 追加 `execution_appended` 事件。
 11. 更新 `last_execution_id`、状态、`manual_required` 和时间，再追加 `status_updated` 事件。
 12. 继续下一条用例。
 
@@ -106,7 +134,7 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 
 ## 汇总并自检
 
-在 `summary.md` 中记录 `skill_version`、`schema_version`、`run_id`、`mode`、`run_state`、`self_check`、`run_valid`、Cursor 版本、用例来源、当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。`run_state` 表示执行进度，使用 `completed|blocked|interrupted`；`run_valid` 独立表示结果记录是否通过完整性自检。业务执行可以 `completed` 但因记录冲突而 `run_valid=false`。
+在 `summary.md` 中记录 `skill_version`、`result_store_version`、`schema_version`、`run_id`、`mode`、`run_state`、`self_check`、`run_valid`、Cursor 版本、用例来源、当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。`run_state` 表示执行进度，使用 `completed|blocked|interrupted`；`run_valid` 独立表示结果记录是否通过完整性自检。业务执行可以 `completed` 但因记录冲突而 `run_valid=false`。
 
 完成前重新读取四个结果文件和证据目录，逐项检查：
 
@@ -122,6 +150,6 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 - 引用的截图位于当前结果目录并实际存在；
 - 结果文件不包含密码或验证码。
 
-自检全部通过时写入 `self_check=passed`、`run_valid=true`。任何 JSONL 无法解析、execution ID 重复、“用例 ID + attempt”重复、状态指针错误、状态与最新执行不一致或开发步骤事件缺失都属于硬失败，必须写入 `self_check=failed`、`run_valid=false`，追加带 `result=failed` 的 `self_check_finished`，并在 `run_finished` 中携带 `run_valid=false`。不得把硬失败降级为 warning 或宣告闭环成功。
+自检时必须先使用 `ai-auto-test-store validate-jsonl` 分别校验事件和执行记录，再做跨文件检查。全部通过时写入 `self_check=passed`、`run_valid=true`。任何 CLI 校验失败、JSONL 无法解析、execution ID 重复、“用例 ID + attempt”重复、状态指针错误、状态与最新执行不一致或开发步骤事件缺失都属于硬失败，必须写入 `self_check=failed`、`run_valid=false`。如果事件文件仍可安全追加，则追加带 `result=failed` 的 `self_check_finished` 和 `run_finished`；如果 CLI 已拒绝该文件，禁止绕过 CLI，改在 summary 和最终回复中记录硬失败。不得把硬失败降级为 warning 或宣告闭环成功。
 
-存在不一致时，只修复能从唯一追加历史确定重建的状态或汇总。无法安全修复时保留原始记录，在 summary 增加运行级人工处理项；不要删除、修改或再次追加冲突的执行记录。该检查由 Agent 完成，不要声称它是独立程序或确定性校验。报告所有 warning 和未能持久化的证据。
+存在不一致时，只修复能从唯一追加历史确定重建的状态或汇总。无法安全修复时保留原始记录，在 summary 增加运行级人工处理项；不要删除、修改或再次追加冲突的执行记录。只把 CLI 覆盖的 JSONL 语法、编码和唯一性描述为确定性校验；其余仍是 Agent 自检。报告所有 warning 和未能持久化的证据。
