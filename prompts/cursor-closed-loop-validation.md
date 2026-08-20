@@ -54,5 +54,6 @@
     - 每条用例的最终结论和简要可见证据；
     - 所有 `manual_required=true` 的人工处理清单；
     - 截图证据是否成功持久化。
+12. 最后重新读取 `case-status.csv`、`case-executions.jsonl`、`summary.md` 和截图目录，检查用例数量、最新 execution ID、状态、attempt、统计、人工处理标记和证据引用是否一致，并将自检结论写入 `summary.md`。该步骤由 Agent 完成，不调用外部校验脚本。
 
 输入齐全后直接执行。不要搜索 MCP、扫描待测项目、设计新框架或改写测试用例。

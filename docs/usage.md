@@ -25,7 +25,7 @@ examples/closed-loop/run-config.example.md
 - 运行配置：examples/closed-loop/run-config.local.md
 - 测试用例：examples/closed-loop/test-cases.md
 
-先执行 Browser Preflight。只通过可见浏览器 UI 测试，不读取代码、API 或数据库，不在结果中记录凭据。每条完成后先追加执行记录，再更新状态，最后运行结果校验器。
+先执行 Browser Preflight。只通过可见浏览器 UI 测试，不读取代码、API 或数据库，不在结果中记录凭据。每条完成后先追加执行记录，再更新状态，最后重新读取结果文件完成一致性自检。
 ```
 
 Skill 默认输出：
@@ -40,25 +40,9 @@ Skill 默认输出：
 
 Cursor 也支持在 `/` 菜单中直接搜索 `/execute-test-cases`。本 MVP 需要同时进入原生 Browser，因此当前推荐保留已经验证过的 `/use-browser` 入口，并在任务正文中明确写出 `execute-test-cases`；Skill 会根据描述自动匹配。
 
-## 3. 校验结果
+## 3. 检查结果
 
-这一步需要 Node.js 20 或更高版本，但不需要安装 npm 第三方包：
-
-```bash
-node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
-```
-
-也可以使用 npm script：
-
-```bash
-npm run validate-run -- .ai-auto-test/results/<run-id> --strict
-```
-
-输出 `VALIDATION PASSED` 且退出码为 0 才表示文件结构与跨表关系通过。`--strict` 会把 warning 也视为失败；机器消费时增加 `--json`。
-
-没有 Node.js 时不影响 Browser Agent 操作页面和生成结果文件，但缺少确定性的跨文件一致性检查。此时必须在 `summary.md` 和最终回复中注明“确定性结果校验未执行”。
-
-校验器检查：
+Skill 会在结束前重新读取结果并检查：
 
 - 必需文件和 CSV 表头；
 - 状态值、时间和 `manual_required`；
@@ -67,6 +51,8 @@ npm run validate-run -- .ai-auto-test/results/<run-id> --strict
 - summary 计数是否与状态表一致；
 - 截图路径是否越界、缺失或为空；
 - 常见密码/验证码字段是否误写入结果。
+
+自检结论写入 `summary.md`。发现不一致时，Agent 只能根据追加式执行历史重建状态和汇总，禁止修改旧执行记录；不能安全修复的项目进入人工处理清单。首版自检不依赖外部脚本，但也不等同于独立程序的确定性校验。
 
 ## 4. 恢复与复测
 

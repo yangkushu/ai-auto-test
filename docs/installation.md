@@ -3,24 +3,23 @@
 ## 环境要求
 
 - Cursor Desktop，使用 Agent Window；PoC 已在 Windows x64、Cursor 3.15.19 验证；
-- Git；
 - 可访问的测试环境和专用测试账号；
 - Cursor 内置 `/use-browser` 可正常打开目标页面。
 
-仅执行 Browser 测试不需要 Node.js。以下功能需要 Node.js 20 或更高版本：
-
-- 运行确定性结果校验器；
-- 运行项目自身的自动化测试；
-- 参与校验器开发。
+首版不要求安装 Node.js、npm、Playwright 或额外 Browser MCP。Git 仅用于克隆和更新项目，也可以直接下载仓库 ZIP。
 
 ## 克隆项目
+
+已安装 Git 时：
 
 ```bash
 git clone git@github.com:yangkushu/ai-auto-test.git
 cd ai-auto-test
 ```
 
-项目不依赖第三方 npm 包，无需运行 `npm install`。Node.js 也不参与 Browser 的页面读取与操作。
+未安装 Git 时，可以从 GitHub 下载仓库 ZIP，解压后直接使用 Cursor 打开目录。
+
+项目没有安装脚本或依赖安装步骤。下载完成后直接使用 Cursor 打开项目。
 
 ## 让 Cursor 发现 Skill
 
@@ -67,13 +66,4 @@ MCP server "cursor-ide-browser" not found
 
 说明 Cursor Browser 组件没有注册；停止测试，不要把业务用例标记为失败。PoC 中重新安装最新版 Cursor 后恢复。
 
-## 可选：校验器与项目自测
-
-如果已安装 Node.js：
-
-```bash
-node --version
-npm test
-```
-
-测试通过说明结果校验器能够运行。没有 Node.js 时可以跳过这一步，但运行结果必须注明“确定性结果校验未执行”。Cursor Browser 必须另外通过 Preflight 验证，因为它属于 Cursor 运行时能力。
+完成 Preflight 即表示首版运行环境就绪。

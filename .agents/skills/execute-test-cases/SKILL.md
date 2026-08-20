@@ -65,14 +65,19 @@ JSONL 和 Markdown 使用无 BOM 的 UTF-8，CSV 使用带 BOM 的 UTF-8。将�
 
 沿用原 run ID。先读取状态和历史，只执行 `pending`/`retest_pending`，禁止删除或修改已有 JSONL 行。分配下一个 attempt 和唯一 execution ID。中断后状态与历史不一致时，以追加式执行历史重建状态，并记录修复原因。
 
-## 汇总并校验
+## 汇总并自检
 
 在 `summary.md` 中记录当前状态统计、每条用例的最新结果、证据引用、可用时的截图哈希，以及所有异常用例组成的人工处理清单。
 
-工作区存在 `scripts/validate-run.mjs` 且 Node.js 可用时运行：
+完成前重新读取三个结果文件和证据目录，逐项检查：
 
-```text
-node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
-```
+- 每条输入用例在状态表中恰好出现一次；
+- 每个完成状态都指向该用例最新的 execution ID；
+- execution ID 唯一，attempt 从 1 连续递增；
+- 状态表与最新执行结论一致；
+- `failed`、`blocked`、`inconclusive` 均设置 `manual_required=true`；
+- summary 状态计数与状态表一致；
+- 引用的截图位于当前结果目录并实际存在；
+- 结果文件不包含密码或验证码。
 
-存在校验错误时不要宣布运行完成。Node.js 不可用时仍可完成 Browser 测试，但必须明确记录“确定性结果校验未执行”，不能声称校验通过。报告所有 warning 和未能持久化的证据。
+将自检结论和发现的问题写入 `summary.md`。存在不一致时先修复可重建的状态或汇总；无法安全修复时保留原始记录，将运行标记为需要人工处理。该检查由 Agent 完成，不要声称它是独立程序或确定性校验。报告所有 warning 和未能持久化的证据。

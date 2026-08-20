@@ -54,9 +54,9 @@ read-only test cases → Cursor orchestration Skill
 - `case-status.csv`：UTF-8 BOM，确保 Windows Excel 可直接识别中文；
 - Windows PowerShell 读取文本时显式使用 `-Encoding UTF8`。
 
-### 结果校验器
+### 结果自检
 
-`scripts/validate-run.mjs` 是独立于 Browser Agent 的确定性检查层。`.mjs` 表示它是 Node.js ES Module。它只使用 Node.js 内置模块，不依赖 npm 第三方包，也不参与页面读取或浏览器操作。它在每批完成后检查：
+首版不提供独立校验程序。主 Agent 在每批完成后重新读取结果文件并检查：
 
 - 三个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
@@ -64,7 +64,7 @@ read-only test cases → Cursor orchestration Skill
 - 截图是否存在、非空并位于当前结果目录；
 - 输出是否可能泄露密码或验证码。
 
-校验器退出码为 `0` 才表示通过；CI 或正式使用建议增加 `--strict`，将 warning 也视为失败。它校验的是结果闭环完整性，不重新判断页面业务结论是否正确。仅执行 Browser 测试不要求 Node.js；需要这一确定性检查层或项目自测时才要求 Node.js 20 或更高版本。
+自检结果写入 `summary.md`。它用于尽早发现明显的记录错误，但仍属于 Agent 判断，不能等同于独立程序的确定性校验。首版只依赖 Cursor；确定性校验器留到闭环稳定后再评估。
 
 ## Browser Preflight
 
@@ -94,7 +94,9 @@ read-only test cases → Cursor orchestration Skill
 
 若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 
-## Browser 返回契约
+## Browser 返回契约示意
+
+以下 TypeScript 仅用于表达字段结构，不是首版运行代码，也不要求安装 TypeScript 或 Node.js：
 
 ```ts
 type BrowserCaseResult = {
@@ -138,6 +140,7 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 4. 已验证：每条完成后形成执行记录和当前状态；
 5. 已验证：复测追加新 attempt，不覆盖旧记录；
 6. 已验证：受控中断后从 pending 用例继续；
-7. 已实现：确定性校验器检查格式、跨表一致性、证据和凭据泄露；
+7. 待验证：Agent 自检能稳定发现跨文件不一致；
 8. 待验证：真实页面的异常结论能正确进入人工处理清单；
-9. 待验证：突然崩溃后能自动重建状态。
+9. 待验证：突然崩溃后能自动重建状态；
+10. 后续评估：是否需要引入独立的确定性校验器。

@@ -27,7 +27,7 @@ Cursor 主 Agent 调度
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。无第三方依赖的结果校验器已经实现并通过自动化测试。尚未验证的是异常结论的真实页面校准、突然崩溃恢复、多账号和批量运行。
+Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。尚未验证的是异常结论的真实页面校准、突然崩溃恢复、多账号和批量运行。
 
 详见：
 
@@ -50,11 +50,4 @@ git clone git@github.com:yangkushu/ai-auto-test.git
 cd ai-auto-test
 ```
 
-Browser 测试核心不依赖 Node.js，也不需要安装 npm 包。使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。
-
-如果需要运行确定性结果校验器或项目自测，则需要 Node.js 20 或更高版本：
-
-```bash
-node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
-npm test
-```
+首版运行时只依赖 Cursor，不需要安装 Node.js、npm、Playwright 或额外 Browser MCP。使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。
