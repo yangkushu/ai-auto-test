@@ -27,10 +27,12 @@ Cursor 主 Agent 调度
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。尚未验证的是异常结论校准、突然崩溃恢复、多账号和批量运行。
+Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页、访问本地测试页面、在未登录状态下完成登录，并依据可见页面判断结果。外部文件输入、跨会话恢复 pending 用例、复测追加 attempt、状态/执行记录/汇总落盘和截图持久化也已完成验证。无第三方依赖的结果校验器已经实现并通过自动化测试。尚未验证的是异常结论的真实页面校准、突然崩溃恢复、多账号和批量运行。
 
 详见：
 
+- [安装说明](docs/installation.md)
+- [使用说明](docs/usage.md)
 - [当前 PoC 状态](docs/poc-status.md)
 - [MVP 方案](docs/方案.md)
 - [架构设计](docs/architecture.md)
@@ -40,3 +42,17 @@ Cursor 原生 Browser 的核心可行性已经验证：能够打开公网网页�
 ## 当前交付方向
 
 首版优先交付 Cursor Skill、输入模板和结果格式，不先开发 Plugin，也不自研浏览器驱动。跑通完整闭环后，再评估 Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
+
+## 快速开始
+
+```bash
+git clone git@github.com:yangkushu/ai-auto-test.git
+cd ai-auto-test
+npm test
+```
+
+使用 Cursor 打开仓库后，项目级 `execute-test-cases` Skill 会从 `.agents/skills/` 自动发现。运行 Browser 用例后使用以下命令校验结果：
+
+```bash
+node scripts/validate-run.mjs .ai-auto-test/results/<run-id> --strict
+```
