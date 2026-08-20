@@ -42,7 +42,7 @@
    - 不执行业务用例，也不得将业务用例标记为 `failed`。
 6. 如果 Preflight 成功，向 `run-events.jsonl` 追加 `preflight_passed`，然后继续。
 7. 将两条用例初始化为 `pending（待测试）`。
-8. 每次只执行一条用例。每一步都记录实际操作、预期和页面上的可见观察，不能因为点击成功就判定通过。按开发模式记录步骤、UI 适应、截图和关键写入事件。
+8. 每次只执行一条用例。每条来源步骤必须保留原编号，分别记录实际操作、预期和页面上的可见观察，不得合并成用例级汇总步骤。不能因为点击成功就判定通过。按开发模式记录步骤、脱敏后的 `browser_action_started`/`browser_action_finished`、UI 适应、截图和关键写入事件；输入动作不得记录账号、密码或验证码值。
 9. 每条用例结束时只允许一个结论：
    - `passed（已通过）`
    - `failed（不通过）`
@@ -50,6 +50,7 @@
    - `inconclusive（无法判断）`
 10. 每条用例结束后按此顺序落盘：
    - 截取最终页面或异常页面；
+   - 重新读取执行历史，确认 execution ID 和“用例 ID + attempt”均不存在；若冲突，禁止追加并进入失败自检；
    - 向 `case-executions.jsonl` 追加完整执行记录；
    - 向 `run-events.jsonl` 追加 `execution_appended`；
    - 更新 `case-status.csv` 中该用例的当前状态、最后执行记录 ID 和时间；
@@ -58,11 +59,11 @@
 11. `manual_required` 规则：`passed` 为 `false`；其余三个结果为 `true`。
 12. 如果截图只能存在于 Cursor 会话，无法保存为本地文件，必须在执行记录和汇总中明确写出限制，不得伪造文件路径。
 13. 全部完成后更新 `summary.md`，至少包含：
-    - skill_version、schema_version、run_id、mode、Cursor 版本、目标环境（不含凭据）、起止时间；
+    - skill_version、schema_version、run_id、mode、run_state、self_check、run_valid、Cursor 版本、目标环境（不含凭据）、起止时间；
     - passed/failed/blocked/inconclusive 数量；
     - 每条用例的最终结论和简要可见证据；
     - 所有 `manual_required=true` 的人工处理清单；
     - 截图证据是否成功持久化。
-14. 最后重新读取 `case-status.csv`、`case-executions.jsonl`、`run-events.jsonl`、`summary.md` 和截图目录，检查用例数量、最新 execution ID、状态、attempt、事件顺序、统计、人工处理标记和证据引用是否一致，并将自检结论写入 `summary.md`。该步骤由 Agent 完成，不调用外部校验脚本。
+14. 最后重新读取 `case-status.csv`、`case-executions.jsonl`、`run-events.jsonl`、`summary.md` 和截图目录，检查用例数量、execution ID 与“用例 ID + attempt”的唯一性、最新状态指针、来源步骤与开发事件的一一对应、Browser action 配对、统计、人工处理标记和证据引用是否一致，并将自检结论写入 `summary.md`。任何唯一性、状态指针或步骤事件问题都必须令 `self_check=failed`、`run_valid=false`，不得只记 warning 或宣告闭环成功。该步骤由 Agent 完成，不调用外部校验脚本。
 
 输入齐全后直接执行。不要搜索 MCP、扫描待测项目、设计新框架或改写测试用例。

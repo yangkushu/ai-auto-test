@@ -1,5 +1,10 @@
-{"time":"2026-08-20T10:00:00+08:00","skill_version":"0.2.0-dev.1","schema_version":1,"run_id":"<run-id>","mode":"development","event":"run_started"}
-{"time":"2026-08-20T10:00:05+08:00","skill_version":"0.2.0-dev.1","schema_version":1,"run_id":"<run-id>","mode":"development","event":"case_started","case_id":"TC-01","attempt":1}
-{"time":"2026-08-20T10:00:10+08:00","skill_version":"0.2.0-dev.1","schema_version":1,"run_id":"<run-id>","mode":"development","event":"step_observed","case_id":"TC-01","attempt":1,"step_index":1,"message":"登录表单可见"}
-{"time":"2026-08-20T10:00:20+08:00","skill_version":"0.2.0-dev.1","schema_version":1,"run_id":"<run-id>","mode":"development","event":"execution_appended","case_id":"TC-01","attempt":1,"execution_id":"<execution-id>"}
-{"time":"2026-08-20T10:00:21+08:00","skill_version":"0.2.0-dev.1","schema_version":1,"run_id":"<run-id>","mode":"development","event":"status_updated","case_id":"TC-01","attempt":1,"execution_id":"<execution-id>","status":"passed"}
+{"time":"2026-08-20T10:00:00+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"run_started"}
+{"time":"2026-08-20T10:00:05+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"case_started","case_id":"TC-01","attempt":1}
+{"time":"2026-08-20T10:00:08+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"step_started","case_id":"TC-01","attempt":1,"step_index":1,"message":"打开管理页"}
+{"time":"2026-08-20T10:00:09+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"browser_action_started","case_id":"TC-01","attempt":1,"step_index":1,"action_seq":1,"action":"navigate","target":"测试环境管理页"}
+{"time":"2026-08-20T10:00:10+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"browser_action_finished","case_id":"TC-01","attempt":1,"step_index":1,"action_seq":1,"action":"navigate","target":"测试环境管理页","result":"success"}
+{"time":"2026-08-20T10:00:11+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"step_observed","case_id":"TC-01","attempt":1,"step_index":1,"message":"登录表单可见","result":"passed"}
+{"time":"2026-08-20T10:00:20+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"execution_appended","case_id":"TC-01","attempt":1,"execution_id":"<execution-id>"}
+{"time":"2026-08-20T10:00:21+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"status_updated","case_id":"TC-01","attempt":1,"execution_id":"<execution-id>","status":"passed"}
+{"time":"2026-08-20T10:00:25+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"self_check_finished","result":"passed","run_valid":true}
+{"time":"2026-08-20T10:00:26+08:00","skill_version":"0.2.0-dev.2","schema_version":1,"run_id":"<run-id>","mode":"development","event":"run_finished","run_state":"completed","self_check":"passed","run_valid":true}

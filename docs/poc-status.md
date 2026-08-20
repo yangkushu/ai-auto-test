@@ -94,6 +94,20 @@ Available servers: cursor-app-control
 
 Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离。闭环运行中，截图复制和结果追加需要申请结果目录写权限。执行器必须把授权限制在当前结果目录，禁止扩大到待测项目代码或其他目录。
 
+## 开发模式 10 用例实测
+
+`0.2.0-dev.1` 使用 `mode=development` 从 358 条用例随机抽取 10 条，得到 4 条 `passed` 和 6 条 `blocked`。运行产生完整生命周期事件、16 个截图事件以及成对的 26 组关键写入事件，证明开发日志能够落盘。
+
+本次也暴露出以下问题：
+
+- 10 个 `case_started` 对应 11 个 `execution_appended`，其中 PD-REQ-004 重复追加相同 execution ID；
+- 自检发现重复后只记录 warning，仍宣告运行完成；
+- 11 组步骤事件接近 execution 数量，未能证明与来源步骤一一对应；
+- “目标页面缺少预期入口”和“无法建立前置条件”的 `failed`/`blocked` 边界不够严格；
+- 过程事件可以解释执行，但不能独立证明 Cursor Browser 工具调用。
+
+因此该 run 保留为失败样本：Browser 与开发日志 PoC 成功，结果一致性验收失败。
+
 ## 尚未验证
 
 - 进程在追加执行记录和更新状态之间突然崩溃后的自动修复；
@@ -111,24 +125,26 @@ Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离�
 
 ## 当前开发版本
 
-`0.2.0-dev.1` 已在仓库中实现，但尚未完成 Cursor 实际运行验收。本版增加：
+当前候选版本为 `0.2.0-dev.2`。`0.2.0-dev.1` 已完成上述 Cursor 实测；新版本在其基础上增加：
 
-- `mode=normal|development`，Prompt 参数优先于运行配置；
-- 正常模式关键事件和开发模式详细事件；
-- `run-events.jsonl` 追加式过程日志；
-- `skill_version`、`schema_version=1` 和生效模式落盘。
+- execution ID 与“用例 ID + attempt”的执行前、追加前双重检查；
+- `self_check`、`run_valid` 以及硬失败的运行级语义；
+- 来源步骤与步骤事件一一对应；
+- 脱敏的 Browser action 前后事件；
+- 更严格的 `failed`、`blocked`、`inconclusive` 判定边界。
 
-这些能力只增加可观测性，不改变 Browser 操作、结论或人工处理规则。
+本版不增加浏览器能力或外部依赖；它同时收紧结果完整性和状态判定，并增强开发过程的可观测性。
 
 ## 下一里程碑
 
-验证异常结论和 Agent 结果自检：
+对照验证 `0.2.0-dev.2`：
 
 ```text
-构造可控的 failed / blocked / inconclusive 场景
-  → 先使用 development 模式验证过程事件和版本落盘
-  → 检查 Browser 判定与人工队列
-  → 由 Agent 重新读取并交叉检查 CSV / JSONL / summary
+复用固定的少量用例与初始数据
+  → 使用 development 模式验证逐步骤和 Browser action 事件
+  → 检查 execution 与 attempt 唯一性
+  → 检查 failed / blocked / inconclusive 边界
+  → 验证自检硬失败会令 run_valid=false
   → 模拟两次落盘之间的中断并重建状态
 ```
 
@@ -136,6 +152,6 @@ Windows Agent Window 的 workspace sandbox 可能无法提供文件系统隔离�
 
 1. 三种异常结论不会被误标为通过；
 2. 所有异常结论进入人工处理清单；
-3. Agent 自检能发现状态、执行历史和 summary 的明显不一致；
+3. Agent 自检能发现状态、执行历史和 summary 的明显不一致，并使无效 run 失败；
 4. 在状态更新前中断时，能根据追加记录重建状态；
 5. 输出编码在 Windows PowerShell 和 Excel 中可正确读取。

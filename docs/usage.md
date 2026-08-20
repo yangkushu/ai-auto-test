@@ -56,13 +56,15 @@ Skill 会在结束前重新读取结果并检查：
 - 必需文件和 CSV 表头；
 - 状态值、时间和 `manual_required`；
 - JSONL 可解析性、唯一 execution ID 和连续 attempt；
+- “用例 ID + attempt”组合唯一；
 - 事件中的 Skill 版本、Schema 版本、run ID、模式和关键写入顺序；
+- 开发模式下来源步骤事件一一对应、Browser action 前后配对；
 - 状态表是否指向最新执行；
 - summary 计数是否与状态表一致；
 - 截图路径是否越界、缺失或为空；
 - 常见密码/验证码字段是否误写入结果。
 
-自检结论写入 `summary.md`。发现不一致时，Agent 只能根据追加式执行历史重建状态和汇总，禁止修改旧执行记录；不能安全修复的项目进入人工处理清单。首版自检不依赖外部脚本，但也不等同于独立程序的确定性校验。
+自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。首版自检不依赖外部脚本，也不等同于独立程序的确定性校验。
 
 当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。
 
@@ -71,8 +73,9 @@ Skill 会在结束前重新读取结果并检查：
 - 恢复时沿用原 run-id，先读取状态和执行历史；
 - 只执行 `pending` 或 `retest_pending`；
 - 复测分配新的 attempt 和 execution ID；
+- 在执行前和追加前分别检查 execution ID 与“用例 ID + attempt”不存在；
 - `case-executions.jsonl` 只追加，禁止修改旧行；
-- 如果状态与执行历史冲突，以追加式历史重建状态，并记录修复原因。
+- 如果状态与唯一执行历史冲突，以追加式历史重建状态，并记录修复原因；历史本身存在重复时将 run 标记为无效并新建 run 重跑。
 
 ## 5. 权限和编码
 

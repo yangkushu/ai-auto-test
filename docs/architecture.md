@@ -74,7 +74,7 @@ read-only test cases → Cursor orchestration Skill
 
 `mode` 只接受 `normal` 和 `development`。新运行按“Prompt 参数 > 运行配置 > normal”解析；恢复运行沿用原模式。模式不得改变浏览器操作、结论或人工处理规则。
 
-正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件。开发模式额外保留步骤观察、UI 适应、截图、关键写入前后和自检细节。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token 或内部推理。
+正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件。开发模式额外保留与来源步骤一一对应的步骤观察、脱敏后的 Browser action 前后事件、UI 适应、截图、关键写入前后和自检细节。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token、输入值或内部推理。过程事件用于审计解释，不等同于独立工具证明。
 
 ### 版本体系
 
@@ -109,6 +109,7 @@ read-only test cases → Cursor orchestration Skill
   → 创建 attempt
   → Browser 执行
   → 校验返回结果
+  → 追加前唯一性检查
   → 追加 case_execution
   → 追加 execution_appended 事件
   → 更新 case_status
@@ -116,9 +117,9 @@ read-only test cases → Cursor orchestration Skill
   → 继续下一条
 ```
 
-先写执行记录再更新状态，避免状态存在但历史证据缺失。若进程在两次写入之间中断，可根据最后记录重建状态。
+先写执行记录再更新状态，避免状态存在但历史证据缺失。执行前和追加前都必须检查 execution ID 与“用例 ID + attempt”唯一。若发生冲突，不得追加；记录完整性错误、停止新的业务执行并进入失败自检。若进程在两次写入之间中断，可根据最后一条唯一记录重建状态。
 
-恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
+恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
 
 若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 
@@ -140,6 +141,7 @@ type BrowserCaseResult = {
     result: 'passed' | 'failed' | 'blocked' | 'inconclusive';
   }>;
   reason?: string;
+  reasonCode?: string;
   finalUrl?: string;
   pageTitle?: string;
   evidence: Array<{
@@ -168,8 +170,8 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 4. 已验证：每条完成后形成执行记录和当前状态；
 5. 已验证：复测追加新 attempt，不覆盖旧记录；
 6. 已验证：受控中断后从 pending 用例继续；
-7. 已实现、待实测：mode 参数、开发模式、过程事件和版本落盘；
-8. 待验证：Agent 自检能稳定发现跨文件不一致；
-9. 待验证：真实页面的异常结论能正确进入人工处理清单；
+7. 已实测：mode 参数、开发模式、过程事件和版本落盘；
+8. 已发现、待回归：Agent 能发现重复 execution ID，但旧版未使无效 run 失败；
+9. 已实测、待校准：真实页面异常能进入人工清单，但目标控件缺失存在误判为 `blocked` 的风险；
 10. 待验证：突然崩溃后能自动重建状态；
 11. 后续评估：是否需要引入独立的确定性校验器。
