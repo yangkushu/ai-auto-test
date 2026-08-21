@@ -24,7 +24,7 @@
 
 `execute-test-cases` 为实际 Skill 名称。请在同一条消息中提供测试用例、测试环境 URL 和测试账号配置。
 
-测试完成后，结果位于当前项目的 `.ai-auto-test/results/<run-id>/`；优先查看其中的 `summary.md`。
+测试完成后，结果位于当前项目的 `.ai-auto-test/results/<run-id>/`；优先查看其中面向人的 `测试报告.md`，再按需查看 `summary.md`。
 
 ## 详细说明
 
@@ -56,7 +56,7 @@ Skill 内部调用 Cursor 原生 Browser
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.6`：状态表改为中文展示，正常模式仅为异常保留截图，开发模式保留逐用例截图；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。
+Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.7`：新增中文测试报告，状态表保持中文展示，并按模式区分截图；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。
 
 更多设计与背景：
 

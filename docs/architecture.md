@@ -18,7 +18,7 @@ read-only test cases → Cursor orchestration Skill
                          ├─ ai-auto-test-store
                          │       ├─ case_execution（只追加）
                          │       └─ run_event（只追加）
-                         └─ summary + 人工处理清单
+                         └─ summary + 测试报告 + 人工处理清单
 ```
 
 ## 组件职责
@@ -50,6 +50,7 @@ read-only test cases → Cursor orchestration Skill
 - `case_execution`：追加式历史，禁止覆盖，包含写操作副作用和清理状态；
 - `run_event`：追加式过程事件，用于观察、中断定位和恢复审计；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
+- `测试报告`：面向测试、研发和产品的中文结论，不替代审计记录。
 
 `ai-auto-test-store` 使用 Go 标准库实现并随 Skill 提供编译后的平台可执行文件。它负责初始化空 JSONL、单对象压缩、UTF-8 无 BOM 追加、即时复验，以及 execution ID/attempt 唯一性；不读取测试账号，不操作 Browser，也不改变业务结论。最终使用者无需安装 Go 或其他语言运行时。
 
@@ -65,7 +66,7 @@ read-only test cases → Cursor orchestration Skill
 
 - `case-executions.jsonl`：UTF-8，无 BOM；
 - `run-events.jsonl`：UTF-8，无 BOM；
-- `summary.md`：UTF-8；
+- `summary.md`、`测试报告.md`：UTF-8；
 - `case-status.csv`：UTF-8 BOM，确保 Windows Excel 可直接识别中文；
 - Windows PowerShell 读取文本时显式使用 `-Encoding UTF8`。
 
@@ -73,13 +74,14 @@ read-only test cases → Cursor orchestration Skill
 
 主 Agent 在每批完成后先调用 `ai-auto-test-store validate-jsonl`，再重新读取结果文件并检查：
 
-- 四个结果文件是否存在且格式可解析；
+- 五个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
 - 异常结论是否进入人工处理；
 - 截图是否存在、非空并位于当前结果目录；
+- 测试报告是否使用中文，并与状态表和执行记录的最新结论一致；
 - 输出是否可能泄露密码或验证码。
 
-自检结果写入 `summary.md`。JSONL 语法、编码和 execution 唯一性由 CLI 确定性检查；状态投影、步骤语义、证据和 summary 的跨文件判断仍由 Agent 完成，不能把整套自检描述成完全确定性校验。
+自检结果写入 `summary.md` 和 `测试报告.md`。JSONL 语法、编码和 execution 唯一性由 CLI 确定性检查；状态投影、步骤语义、证据、summary 和测试报告的跨文件判断仍由 Agent 完成，不能把整套自检描述成完全确定性校验。
 
 ### 运行模式与事件
 
@@ -90,10 +92,10 @@ read-only test cases → Cursor orchestration Skill
 ### 版本体系
 
 - Skill 版本：读取 `.agents/skills/execute-test-cases/VERSION`，使用 Semantic Versioning；
-- Schema 版本：当前为 `3`，将状态表升级为中文展示；
+- Schema 版本：当前为 `4`，增加必需的中文测试报告；
 - run ID：唯一标识一次测试运行。
 
-每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1、2 的历史运行仍可校验；从 Schema 2 起，自检结束事件固定为 `self_check_finished`，Schema 3 使用中文状态表。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
+每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1、2、3 的历史运行仍可校验；从 Schema 2 起，自检结束事件固定为 `self_check_finished`，Schema 3 使用中文状态表，Schema 4 增加中文测试报告。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
 
 版本升级规则：
 
@@ -131,7 +133,7 @@ read-only test cases → Cursor orchestration Skill
 
 先写执行记录再更新状态，避免状态存在但历史证据缺失。执行前和追加前都必须检查 execution ID 与“用例 ID + attempt”唯一。若发生冲突，不得追加；记录完整性错误、停止新的业务执行并进入失败自检。若进程在两次写入之间中断，可根据最后一条唯一记录重建状态。
 
-恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式和 Schema 版本必须一致；任一项改变都新建 run。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1、2 的历史记录仍可由 CLI 校验，但不得在 Schema 3 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
+恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式和 Schema 版本必须一致；任一项改变都新建 run。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1、2、3 的历史记录仍可由 CLI 校验，但不得在 Schema 4 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
 
 若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 

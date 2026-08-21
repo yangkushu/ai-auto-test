@@ -44,12 +44,13 @@ Skill 默认输出：
 ├── case-executions.jsonl
 ├── run-events.jsonl
 ├── summary.md
+├── 测试报告.md
 └── *.png
 ```
 
 Browser 由 Skill 内部调用。不要手动选择 `/use-browser`；否则只能验证 Cursor Browser，不能证明本 Skill 的编排、状态和审计逻辑生效。
 
-`case-status.csv` 使用中文表头和中文展示值，例如“已通过”“测试受阻”“是”“待人工清理”。`case-executions.jsonl` 和 `run-events.jsonl` 保持英文机器字段与状态值，供 CLI 校验与恢复使用。
+`测试报告.md` 是面向测试、研发和产品的中文交付物，优先查看。它包含结论、范围、中文用例明细、人工处理、测试数据影响和证据/限制。`case-status.csv` 使用中文表头和中文展示值，例如“已通过”“测试受阻”“是”“待人工清理”。`case-executions.jsonl` 和 `run-events.jsonl` 保持英文机器字段与状态值，供 CLI 校验与恢复使用。
 
 ## 3. 检查结果
 
@@ -63,12 +64,13 @@ Skill 使用随包交付的 `ai-auto-test-store` 初始化、写入和校验两�
 - 开发模式下来源步骤事件一一对应、Browser action 前后配对；
 - 状态表是否指向最新执行；
 - summary 计数是否与状态表一致；
+- `测试报告.md` 是否存在、中文表达完整，且统计与状态表一致；
 - 截图路径是否越界、缺失或为空；开发模式每条执行都必须有截图，正常模式只要求异常用例和 Preflight 失败有截图；
 - 常见密码/验证码字段是否误写入结果。
 
 自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。CLI 校验失败、execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。
 
-当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。Schema 2 及之后的事件必须使用 `self_check_finished`，不能使用已废弃的 `self_check`；Schema 1、2 的历史结果可校验但不能在 Schema 3 下恢复追加。`summary.md`、`case-status.csv`、事件消息、观察和建议使用中文；代码、URL、JSONL 机器字段与原始页面证据保持原样。
+当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。Schema 2 及之后的事件必须使用 `self_check_finished`，不能使用已废弃的 `self_check`；Schema 1、2、3 的历史结果可校验但不能在 Schema 4 下恢复追加。`summary.md`、`测试报告.md`、`case-status.csv`、事件消息、观察和建议使用中文；代码、URL、JSONL 机器字段与原始页面证据保持原样。
 
 ## 4. 恢复与复测
 
