@@ -156,4 +156,4 @@ MCP server "cursor-ide-browser" not found
 
 该脚本使用 Go 标准库交叉编译 Windows x64 和 Linux x64 文件；最终使用者不执行此步骤。
 
-GitHub Actions 在 pull request 和 `main` push 时自动执行测试、静态检查、双平台构建与交付校验。推送与 `VERSION` 一致的 `v<version>` tag 后，会自动发布完整 Skill `tar.gz`、两个平台二进制和 `SHA256SUMS`。详见[构建、分发与安装设计](distribution.md)。
+GitHub Actions 在 pull request 和 `master` push 时自动执行测试、静态检查、双平台构建与交付校验。推送与 `VERSION` 一致的 `v<version>` tag 后，会自动发布完整 Skill `tar.gz`、两个平台二进制和 `SHA256SUMS`。详见[构建、分发与安装设计](distribution.md)。

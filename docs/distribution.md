@@ -40,7 +40,7 @@ CLI 只使用 Go 标准库并设置 `CGO_ENABLED=0`，不依赖 Node.js、Python
 
 ## CI 与 Release
 
-`.github/workflows/ci-release.yml` 在 pull request 和 `main` push 时执行测试、静态检查、双目标构建、随仓二进制一致性检查和交付检查。推送与 `VERSION` 一致的 `v<version>` tag 后，工作流额外创建 GitHub Release。
+`.github/workflows/ci-release.yml` 在 pull request 和 `master` push 时执行测试、静态检查、双目标构建、随仓二进制一致性检查和交付检查。推送与 `VERSION` 一致的 `v<version>` tag 后，工作流额外创建 GitHub Release。
 
 Release 规则：
 
