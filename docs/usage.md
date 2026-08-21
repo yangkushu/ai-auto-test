@@ -13,8 +13,8 @@ examples/closed-loop/run-config.example.md
 
 运行配置中的 `mode` 支持：
 
-- `normal`：正常模式，记录恢复与审计所需的关键事件；
-- `development`：开发模式，额外记录步骤观察、UI 适应、截图和关键文件写入事件。
+- `normal`：正常模式，记录恢复与审计所需的关键事件；`passed` 不保存截图，异常用例和 Preflight 失败保存截图；
+- `development`：开发模式，额外记录步骤观察、UI 适应、截图和关键文件写入事件；每条实际执行用例均保存截图。
 
 未填写时默认 `normal`。本次 Prompt 中的 `mode=...` 优先于运行配置；恢复已有 run 时沿用原模式。
 
@@ -49,24 +49,26 @@ Skill 默认输出：
 
 Browser 由 Skill 内部调用。不要手动选择 `/use-browser`；否则只能验证 Cursor Browser，不能证明本 Skill 的编排、状态和审计逻辑生效。
 
+`case-status.csv` 使用中文表头和中文展示值，例如“已通过”“测试受阻”“是”“待人工清理”。`case-executions.jsonl` 和 `run-events.jsonl` 保持英文机器字段与状态值，供 CLI 校验与恢复使用。
+
 ## 3. 检查结果
 
 Skill 使用随包交付的 `ai-auto-test-store` 初始化、写入和校验两个 JSONL，再执行跨文件检查：
 
 - 必需文件和 CSV 表头；
-- 状态值、时间、`manual_required`、`cleanup_required` 和 `cleanup_status`；
+- 中文状态表表头、中文状态/布尔值/清理状态与最新执行记录的映射；
 - JSONL 可解析性、唯一 execution ID 和连续 attempt；
 - “用例 ID + attempt”组合唯一；
 - 事件中的 Skill 版本、Schema 版本、run ID、模式和关键写入顺序；
 - 开发模式下来源步骤事件一一对应、Browser action 前后配对；
 - 状态表是否指向最新执行；
 - summary 计数是否与状态表一致；
-- 截图路径是否越界、缺失或为空；
+- 截图路径是否越界、缺失或为空；开发模式每条执行都必须有截图，正常模式只要求异常用例和 Preflight 失败有截图；
 - 常见密码/验证码字段是否误写入结果。
 
 自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。CLI 校验失败、execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。
 
-当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。Schema 2 的事件必须使用 `self_check_finished`，不能使用已废弃的 `self_check`；Schema 1 的历史结果可校验但不能在 Schema 2 下恢复追加。人类可读的 summary、事件消息、观察和建议使用中文；代码、URL、机器字段与原始页面证据保持原样。
+当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。Schema 2 及之后的事件必须使用 `self_check_finished`，不能使用已废弃的 `self_check`；Schema 1、2 的历史结果可校验但不能在 Schema 3 下恢复追加。`summary.md`、`case-status.csv`、事件消息、观察和建议使用中文；代码、URL、JSONL 机器字段与原始页面证据保持原样。
 
 ## 4. 恢复与复测
 

@@ -46,7 +46,7 @@ read-only test cases → Cursor orchestration Skill
 ### 文件仓储
 
 - `test_case`：只读输入；
-- `case_status`：当前结果投影，可更新，包含最新执行的测试数据清理状态；
+- `case_status`：当前结果投影，可更新；以中文表头、中文状态和中文清理状态供测试人员直接查看；
 - `case_execution`：追加式历史，禁止覆盖，包含写操作副作用和清理状态；
 - `run_event`：追加式过程事件，用于观察、中断定位和恢复审计；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
@@ -85,15 +85,15 @@ read-only test cases → Cursor orchestration Skill
 
 `mode` 只接受 `normal` 和 `development`。新运行按“Prompt 参数 > 运行配置 > normal”解析；恢复运行沿用原模式。模式不得改变浏览器操作、结论或人工处理规则。
 
-正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件。开发模式额外保留与来源步骤一一对应的步骤观察、脱敏后的 Browser action 前后事件、UI 适应、截图、关键写入前后和自检细节。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token、输入值或内部推理。过程事件用于审计解释，不等同于独立工具证明。
+正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件；只为异常用例和 Preflight 失败保存截图。开发模式额外保留与来源步骤一一对应的步骤观察、脱敏后的 Browser action 前后事件、UI 适应、截图、关键写入前后和自检细节；每条实际执行用例均保存截图。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token、输入值或内部推理。过程事件用于审计解释，不等同于独立工具证明。
 
 ### 版本体系
 
 - Skill 版本：读取 `.agents/skills/execute-test-cases/VERSION`，使用 Semantic Versioning；
-- Schema 版本：当前为 `2`，在既有业务结果结构上增加副作用和清理字段；
+- Schema 版本：当前为 `3`，将状态表升级为中文展示；
 - run ID：唯一标识一次测试运行。
 
-每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1 的历史运行仍可校验；从 Schema 2 起，自检结束事件固定为 `self_check_finished`。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
+每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1、2 的历史运行仍可校验；从 Schema 2 起，自检结束事件固定为 `self_check_finished`，Schema 3 使用中文状态表。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
 
 版本升级规则：
 
@@ -131,7 +131,7 @@ read-only test cases → Cursor orchestration Skill
 
 先写执行记录再更新状态，避免状态存在但历史证据缺失。执行前和追加前都必须检查 execution ID 与“用例 ID + attempt”唯一。若发生冲突，不得追加；记录完整性错误、停止新的业务执行并进入失败自检。若进程在两次写入之间中断，可根据最后一条唯一记录重建状态。
 
-恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式和 Schema 版本必须一致；任一项改变都新建 run。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1 的历史记录仍可由 CLI 校验，但不得在 Schema 2 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
+恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式和 Schema 版本必须一致；任一项改变都新建 run。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1、2 的历史记录仍可由 CLI 校验，但不得在 Schema 3 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
 
 若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 

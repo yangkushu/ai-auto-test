@@ -26,7 +26,7 @@
 执行流程：
 
 1. 读取运行配置和测试用例。拒绝不存在的文件、未替换的 `<...>`/TODO 占位符、无效 URL 和未定义账号；输入无效时在创建 run 或启动 Browser 前停止。
-2. 按 Prompt 参数覆盖运行配置，确认本次使用 `development`，读取 Skill 同目录的 `VERSION`，并回显运行模式、Skill 版本和 `schema_version=2`。
+2. 按 Prompt 参数覆盖运行配置，确认本次使用 `development`，读取 Skill 同目录的 `VERSION`，并回显运行模式、Skill 版本和 `schema_version=3`。
 3. 创建时间戳格式的 `<run-id>`，并在 `.ai-auto-test/results/<run-id>/` 创建：
    - `case-status.csv`：参考 `examples/closed-loop/case-status.example.csv`；
    - `case-executions.jsonl`：每次尝试追加一行 JSON，参考 `examples/closed-loop/case-execution.example.jsonl`；
@@ -41,7 +41,7 @@
    - 在 summary 中记录 skill_version、schema_version、run_id、mode，以及“事实、推断、建议”的失败诊断；
    - 所有用例保持 `pending`，不创建 case execution、`case_started` 或 `status_updated`。
 6. 如果 Preflight 成功，通过 CLI 向 `run-events.jsonl` 追加 `preflight_passed`，然后继续。
-7. 将两条用例初始化为 `pending（待测试）`。
+7. 使用中文表头和中文展示值创建 `case-status.csv`：浏览器状态使用“待测试、已通过、不通过、测试受阻、无法判断、待复测”，人工处理使用“是/否”，清理状态使用“不适用、已完成、待人工清理”。JSONL 的机器字段与状态值保持英文。
 8. 每次只执行一条用例。每条来源步骤必须保留原编号，分别记录实际操作、预期和页面上的可见观察，不得合并成用例级汇总步骤。不能因为点击成功就判定通过。按开发模式记录步骤、脱敏后的 `browser_action_started`/`browser_action_finished`、UI 适应、截图和关键写入事件；输入动作不得记录账号、密码或验证码值。
 9. 每条用例结束时只允许一个结论：
    - `passed（已通过）`
@@ -49,7 +49,7 @@
    - `blocked（测试受阻）`
    - `inconclusive（无法判断）`
 10. 每条用例结束后按此顺序落盘，所有 JSONL 必须通过随 Skill 交付的 `ai-auto-test-store` 写入，禁止直接编辑或 shell 重定向：
-   - 截取最终页面或异常页面；
+   - 因本次为 `development`，截取最终页面或异常页面；正常模式仅对异常用例截图；
    - 重新读取执行历史，确认 execution ID 和“用例 ID + attempt”均不存在；若冲突，禁止追加并进入失败自检；
    - 向 `case-executions.jsonl` 追加完整执行记录；
    - 向 `run-events.jsonl` 追加 `execution_appended`；
