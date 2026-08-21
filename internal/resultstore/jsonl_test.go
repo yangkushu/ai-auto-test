@@ -149,6 +149,42 @@ func TestAppendRejectsDuplicateCaseAttemptBeforeWrite(t *testing.T) {
 	}
 }
 
+func TestExecutionValidationScopesAttemptsByStage(t *testing.T) {
+	data := []byte(
+		`{"executionId":"fast-1","runId":"run-1","caseId":"TC-1","stage":"fast","attempt":1,"status":"passed"}` + "\n" +
+			`{"executionId":"browser-1","runId":"run-1","caseId":"TC-1","stage":"browser","attempt":1,"status":"passed"}` + "\n",
+	)
+	validation := Validate(data, KindExecutions)
+	if !validation.OK {
+		t.Fatalf("different stages should allow attempt 1: %v", validation.Errors)
+	}
+}
+
+func TestExecutionValidationRejectsDuplicateCaseAttemptInSameStage(t *testing.T) {
+	data := []byte(
+		`{"executionId":"fast-1","runId":"run-1","caseId":"TC-1","stage":"fast","attempt":1,"status":"passed"}` + "\n" +
+			`{"executionId":"fast-2","runId":"run-1","caseId":"TC-1","stage":"fast","attempt":1,"status":"passed"}` + "\n",
+	)
+	validation := Validate(data, KindExecutions)
+	if validation.OK {
+		t.Fatal("expected duplicate stage attempt to be rejected")
+	}
+	if !strings.Contains(strings.Join(validation.Errors, ";"), "duplicate_case_attempt_\"TC-1#fast#1\"") {
+		t.Fatalf("unexpected errors: %v", validation.Errors)
+	}
+}
+
+func TestExecutionValidationRejectsInvalidStage(t *testing.T) {
+	data := []byte(`{"executionId":"exec-1","runId":"run-1","caseId":"TC-1","stage":"manual","attempt":1,"status":"passed"}` + "\n")
+	validation := Validate(data, KindExecutions)
+	if validation.OK {
+		t.Fatal("expected invalid stage to be rejected")
+	}
+	if !strings.Contains(strings.Join(validation.Errors, ";"), "invalid_stage") {
+		t.Fatalf("unexpected errors: %v", validation.Errors)
+	}
+}
+
 func TestExecutionValidationAcceptsLegacySnakeCaseIDs(t *testing.T) {
 	data := []byte("{\"execution_id\":\"exec-1\",\"run_id\":\"run-1\",\"case_id\":\"TC-1\",\"attempt\":1,\"status\":\"passed\"}\n")
 	validation := Validate(data, KindExecutions)

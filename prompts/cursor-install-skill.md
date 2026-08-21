@@ -13,4 +13,4 @@
 7. 重载 Cursor 或提示我新建 Agent 会话，再确认 `/execute-test-cases` 可见。
 8. 只有“完整目录已安装 + 当前平台 CLI 版本一致 + Cursor 已发现 Skill”同时满足时，报告安装成功；否则报告具体受阻项，不要宣称成功。
 
-不安装 Node.js、npm、Python、Go、Playwright 或额外 Browser MCP。安装期间不要读取或输出测试账号、密码、Cookie、Token 或验证码。
+不安装 Node.js、npm、Python 或 Go。不要在安装 Skill 时改动 MCP 配置；运行默认的两阶段测试前，如需快速验证，由我在 Cursor 中另行安装 Playwright MCP。安装期间不要读取或输出测试账号、密码、Cookie、Token 或验证码。

@@ -1,4 +1,4 @@
 interface:
   display_name: "执行浏览器测试用例"
   short_description: "通过 Cursor Browser 执行用例并保存可审计结果"
-  default_prompt: "使用 $execute-test-cases mode=normal 通过 Cursor 原生 Browser 执行测试用例、保存证据并自检结果记录。"
+  default_prompt: "使用 $execute-test-cases stage=auto mode=normal 执行测试用例，先快速验证，再按规则进行 Browser 验证并自检结果记录。"

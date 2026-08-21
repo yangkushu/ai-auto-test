@@ -2,18 +2,19 @@
 
 ## 总体
 
-MVP 是 Cursor-first 的测试编排 Skill，不自研浏览器驱动。用户直接调用 `execute-test-cases`；Skill 负责读取用例和控制顺序，在内部调用 Cursor 原生 Browser，并使用随包交付的 CLI 写入关键结果。
+MVP 是 Cursor-first 的测试编排 Skill，不自研浏览器驱动。用户直接调用 `execute-test-cases`；Skill 负责读取用例和控制顺序，在内部调用 Playwright MCP 与 Cursor 原生 Browser，并使用随包交付的 CLI 写入关键结果。
 
-当前实现是单阶段 Cursor Browser。已确认、待实现的两阶段架构使用 Playwright MCP 进行无截图快速验证，并保留 Cursor 原生 Browser 作为可见 UI 验证层；它不应被误认为当前已发布能力，详见[两阶段测试设计](two-stage-design.md)。
+当前版本的运行契约是两阶段：先用 Playwright MCP 对全部输入用例做无截图快速验证，再按规则用 Cursor 原生 Browser 做可见 UI 验证。两种工具的职责、限制与降级路径见[两阶段测试设计](two-stage-design.md)。
 
 ```text
 run config ───────────────┐
                          ▼
 read-only test cases → Cursor orchestration Skill
                          │
-                         ├─ Browser Preflight
-                         │
-                         ├─ Cursor native Browser
+                         ├─ shared input preflight
+                         ├─ Playwright MCP preflight → fast validation (all cases)
+                         ├─ Browser selection
+                         ├─ Cursor Browser preflight → Browser validation (selected cases)
                          │       └─ step observations + verdict + evidence
                          │
                          ├─ case_status（可更新）
@@ -28,15 +29,24 @@ read-only test cases → Cursor orchestration Skill
 ### 主 Agent / Skill
 
 - 校验输入是否齐全；
-- 执行 Browser Preflight；
+- 按请求阶段执行共享、快速验证和 Browser 验证前置检查；
 - 读取尚未完成的用例；
-- 每次只向 Browser 提交一条用例；
-- 校验 Browser 返回结果是否包含步骤观察和唯一结论；
+- 每次只向一个阶段工具提交一条用例；
+- 校验阶段返回结果是否包含步骤观察和唯一结论；
+- 在快速验证结束后记录 Browser 选择原因，并计算自动化结论；
 - 通过结果写入器先追加执行记录，再更新当前状态；
 - 按运行模式追加关键或详细过程事件；
 - 生成批次汇总和人工处理清单。
 
-### Browser 子 Agent
+### 快速验证 Agent
+
+- 仅使用 Playwright MCP 的无障碍快照和允许的简单 UI 操作；
+- 使用测试 ID、角色/名称、标签、占位符或精确文本定位；
+- 不截图、不使用视觉定位、不执行任意 JavaScript，也不访问 Network、Cookie/Storage；
+- 对写操作、复杂交互或无法可靠观察的步骤跳过并说明原因；
+- 不读代码、不调用内部 API、不访问数据库、不修复缺陷。
+
+### Browser 验证 Agent
 
 - 只通过可见 UI 建立前置条件；
 - 按顺序执行用例步骤；
@@ -48,13 +58,13 @@ read-only test cases → Cursor orchestration Skill
 ### 文件仓储
 
 - `test_case`：只读输入；
-- `case_status`：当前结果投影，可更新；以中文表头、中文状态和中文清理状态供测试人员直接查看；
-- `case_execution`：追加式历史，禁止覆盖，包含写操作副作用和清理状态；
+- `case_status`：当前结果投影，可更新；以中文表头分别保存快速验证状态、Browser 验证状态和自动化结论；
+- `case_execution`：追加式历史，禁止覆盖，包含 `stage=fast|browser`、写操作副作用和清理状态；
 - `run_event`：追加式过程事件，用于观察、中断定位和恢复审计；
 - `summary/manifest`：保存批次级环境、版本、时间和统计。
 - `测试报告`：面向测试、研发和产品的中文结论，不替代审计记录。
 
-`ai-auto-test-store` 使用 Go 标准库实现并随 Skill 提供编译后的平台可执行文件。它负责初始化空 JSONL、单对象压缩、UTF-8 无 BOM 追加、即时复验，以及 execution ID/attempt 唯一性；不读取测试账号，不操作 Browser，也不改变业务结论。最终使用者无需安装 Go 或其他语言运行时。
+`ai-auto-test-store` 使用 Go 标准库实现并随 Skill 提供编译后的平台可执行文件。它负责初始化空 JSONL、单对象压缩、UTF-8 无 BOM 追加、即时复验，以及 execution ID/`用例 ID + 阶段 + attempt` 唯一性；不读取测试账号，不操作浏览器，也不改变业务结论。最终使用者无需安装 Go 或其他语言运行时。
 
 ## 构建与分发架构
 
@@ -79,7 +89,8 @@ read-only test cases → Cursor orchestration Skill
 - 五个结果文件是否存在且格式可解析；
 - 状态、执行记录、最新 attempt 与 summary 统计是否一致；
 - 异常结论是否进入人工处理；
-- 截图是否存在、非空并位于当前结果目录；
+- Browser 阶段要求保存的截图是否存在、非空并位于当前结果目录；快速验证不应产生截图；
+- 两阶段状态、Browser 选择、覆盖率和自动化结论是否一致；
 - 测试报告是否使用中文，并与状态表和执行记录的最新结论一致；
 - 输出是否可能泄露密码或验证码。
 
@@ -89,15 +100,15 @@ read-only test cases → Cursor orchestration Skill
 
 `mode` 只接受 `normal` 和 `development`。新运行按“Prompt 参数 > 运行配置 > normal”解析；恢复运行沿用原模式。模式不得改变浏览器操作、结论或人工处理规则。
 
-正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件；只为异常用例和 Preflight 失败保存截图。开发模式额外保留与来源步骤一一对应的步骤观察、脱敏后的 Browser action 前后事件、UI 适应、截图、关键写入前后和自检细节；每条实际执行用例均保存截图。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token、输入值或内部推理。过程事件用于审计解释，不等同于独立工具证明。
+正常模式保留批次、Preflight、用例开始、execution 追加、状态更新、自检和结束等关键事件；只为异常 Browser 用例和 Preflight 失败保存截图。开发模式额外保留与来源步骤一一对应的步骤观察、脱敏后的 Browser action 前后事件、UI 适应、截图、关键写入前后和自检细节；每条实际执行的 Browser 用例均保存截图。快速验证在两种模式下均不保存截图。事件逐行追加到 `run-events.jsonl`，不得记录凭据、Cookie、Token、输入值或内部推理。过程事件用于审计解释，不等同于独立工具证明。
 
 ### 版本体系
 
 - Skill 版本：读取 `.agents/skills/execute-test-cases/VERSION`，使用 Semantic Versioning；
-- Schema 版本：当前为 `4`，增加必需的中文测试报告；
+- Schema 版本：当前为 `5`，增加两阶段状态、阶段化 execution 和 Browser 选择；
 - run ID：唯一标识一次测试运行。
 
-每次运行必须将三者和生效模式写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1、2、3 的历史运行仍可校验；从 Schema 2 起，自检结束事件固定为 `self_check_finished`，Schema 3 使用中文状态表，Schema 4 增加中文测试报告。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
+每次运行必须将三者和请求/生效阶段写入 summary；每条过程事件必须包含 Skill 版本、Schema 版本、run ID 和模式。Schema 1～4 的历史运行仍可校验，但不能恢复或追加；Schema 5 使用两阶段状态和中文测试报告。候选版本使用 `dev`/`rc` 后缀，正式版本使用 Git Tag。
 
 版本升级规则：
 
@@ -112,18 +123,18 @@ read-only test cases → Cursor orchestration Skill
 正式执行前依次验证：
 
 1. `input_validation`：输入、账号、平台二进制与版本；
-2. `browser_capability`：Skill 能在内部启动 Cursor 原生 Browser；
-3. `target_navigation`：目标 URL、最终 URL、标题、可见错误和重定向；
-4. `application_identity`：页面不是连接失败、4xx/5xx 或反向代理错误页，并匹配成功标志或明确应用界面。
+2. `fast_capability`：需要快速验证时，Playwright MCP 能执行导航、无障碍快照、点击和输入；
+3. `target_navigation` 与 `application_identity`：每个实际执行阶段都确认目标 URL、最终 URL、标题、可见错误、重定向和应用身份；
+4. `browser_capability`：需要 Browser 验证时，Skill 能在内部启动 Cursor 原生 Browser。
 
-`input_validation` 在创建 run 前完成，输入无效时不创建运行结果；输入通过会写入 `run_started`。其余阶段在开发模式下各自记录开始和通过事件。失败时必须将“事实、推断、建议”写入运行级人工处理项。503 只能确认目标 URL 未获得应用页面，不能直接断言“等待环境恢复”；域名迁移、服务故障和路径错误都只是带置信度的可能原因。所有业务用例保持 `pending`，不得创建业务 execution。目标 URL 或运行配置发生变化时必须新建 run；仅同一配置下的暂时性故障才可恢复原 run。
+`input_validation` 在创建 run 前完成，输入无效时不创建运行结果；输入通过会写入 `run_started`。其余阶段在开发模式下各自记录开始和通过事件。快速验证 MCP 不可用时，`fast`/`all` 停止；`auto` 必须由用户选择安装后重试或改为全量 Browser 验证；`browser` 不检查快速验证 MCP。失败时必须将“事实、推断、建议”写入运行级人工处理项。503 只能确认目标 URL 未获得应用页面，不能直接断言“等待环境恢复”；域名迁移、服务故障和路径错误都只是带置信度的可能原因。未执行的业务阶段保持 `pending`，不得创建伪造 execution。目标 URL 或运行配置发生变化时必须新建 run；仅同一配置下的暂时性故障才可恢复原 run。
 
 ## 单条用例事务顺序
 
 ```text
 读取 pending/retest_pending 用例
   → 创建 attempt
-  → Browser 执行
+  → 按 stage 执行快速验证或 Browser 验证
   → 校验返回结果
   → ai-auto-test-store 候选校验
   → CLI 追加 case_execution 并即时复验
@@ -133,9 +144,9 @@ read-only test cases → Cursor orchestration Skill
   → 继续下一条
 ```
 
-先写执行记录再更新状态，避免状态存在但历史证据缺失。执行前和追加前都必须检查 execution ID 与“用例 ID + attempt”唯一。若发生冲突，不得追加；记录完整性错误、停止新的业务执行并进入失败自检。若进程在两次写入之间中断，可根据最后一条唯一记录重建状态。
+先写执行记录再更新状态，避免状态存在但历史证据缺失。执行前和追加前都必须检查 execution ID 与“用例 ID + stage + attempt”唯一。若发生冲突，不得追加；记录完整性错误、停止新的业务执行并进入失败自检。若进程在两次写入之间中断，可根据最后一条唯一记录重建状态。
 
-恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式和 Schema 版本必须一致；任一项改变都新建 run。复测生成新的 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1、2、3 的历史记录仍可由 CLI 校验，但不得在 Schema 4 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
+恢复时必须沿用原 run-id，读取状态和历史记录，只执行 `pending`/`retest_pending`。恢复前目标 URL、账号配置、用例选择、运行模式、请求阶段和 Schema 版本必须一致；任一项改变都新建 run。复测生成该阶段的新 attempt 和 execution ID，禁止修改旧 JSONL 行。Schema 1～4 的历史记录仍可由 CLI 校验，但不得在 Schema 5 下继续追加。历史已经存在重复 ID 或重复 attempt 时无法在只追加约束下修复，应保留 run、标记 `run_valid=false` 并新建 run 重跑。受控跨会话恢复已经验证；两次写入之间的突然崩溃恢复仍需验证。
 
 若 Cursor 需要额外文件写权限，只允许当前结果目录。截图从 Cursor 临时目录复制后应记录相对路径和 SHA-256；相同页面允许产生相同哈希，但不得覆盖旧证据文件。
 
@@ -150,8 +161,9 @@ read-only test cases → Cursor orchestration Skill
 以下 TypeScript 仅用于表达字段结构，不是首版运行代码，也不要求安装 TypeScript 或 Node.js：
 
 ```ts
-type BrowserCaseResult = {
+type StageCaseResult = {
   caseId: string;
+  stage: 'fast' | 'browser';
   status: 'passed' | 'failed' | 'blocked' | 'inconclusive';
   startedAt: string;
   finishedAt: string;
@@ -167,7 +179,7 @@ type BrowserCaseResult = {
   finalUrl?: string;
   pageTitle?: string;
   evidence: Array<{
-    kind: 'screenshot' | 'console_log' | 'network_log';
+    kind: 'screenshot';
     uri: string;
   }>;
   sideEffects: {
@@ -184,11 +196,11 @@ type BrowserCaseResult = {
 };
 ```
 
-如果缺少可见观察，主 Agent 不得接受 `passed`。如果 Browser 无法提供足够证据，应返回 `inconclusive`。
+如果缺少与阶段工具相符的可观察证据，主 Agent 不得接受 `passed`。快速验证不得附加截图；Browser 无法提供足够可见证据时应返回 `inconclusive`。
 
 ## 人工处理规则
 
-MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
+MVP 不在执行前为用例分类人工阶段。自动化结论生成后：
 
 - `failed`：进入人工复核/缺陷确认；
 - `blocked`：进入环境、账号或能力处理；
@@ -198,7 +210,7 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 ## MVP 验收
 
 1. 已验证：读取外部只读正流程用例；
-2. 已验证：Preflight 能确认 Browser 可用，并识别工具注册故障；
+2. 已验证：Cursor Browser Preflight 能确认 Browser 可用，并识别工具注册故障；
 3. 已验证：逐条调用 Browser 并获得结构化结论；
 4. 已验证：每条完成后形成执行记录和当前状态；
 5. 已验证：复测追加新 attempt，不覆盖旧记录；
@@ -209,4 +221,5 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 10. 待验证：突然崩溃后能自动重建状态；
 11. 后续评估：是否需要把当前 JSONL CLI 扩展为完整的跨文件确定性校验器。
 12. 待验证：从 GitHub Remote Rule 导入完整 Skill 后，Windows x64 能发现 Skill 并执行随包 CLI；
-13. 已实现、待线上验收：GitHub Actions Windows/Linux x64 构建和 tag Release。
+13. 已实现、待线上验收：GitHub Actions Windows/Linux x64 构建和 tag Release；
+14. 已实现、待 Cursor 回归：Playwright MCP 快速验证、自动 Browser 选择、Schema 5 两阶段写入与降级路径。

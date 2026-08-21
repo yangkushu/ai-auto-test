@@ -1,6 +1,6 @@
 # ai-auto-test
 
-`ai-auto-test` 是一个供测试人员使用的 AI 浏览器测试编排项目。它读取已有测试用例，调用 Browser Agent 在真实页面上执行正流程，记录每条用例的结论与证据，并生成需要人工处理的清单。
+`ai-auto-test` 是一个供测试人员使用的 AI Web 测试编排项目。它读取已有测试用例，先进行无截图的快速验证，再按规则调用 Browser Agent 验证复杂或抽样用例，记录每条用例的结论与证据，并生成需要人工处理的清单。
 
 当前目标不是替代人工测试，也不是建立完整测试平台，而是先用 Cursor Agent 跑通一条可重复、可审计的最小流水线。
 
@@ -32,33 +32,31 @@
 - [使用说明](docs/usage.md)：输入格式、开发模式、结果检查和恢复复测。
 - [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)：可复制的完整验证 Prompt。
 
-## 当前已实现 MVP
+## 当前开发版本
 
 ```text
 只读测试用例
     ↓
-Cursor 主 Agent 调度
+Playwright MCP 快速验证（全量）
     ↓
-Skill 内部调用 Cursor 原生 Browser
+Cursor 原生 Browser 验证（强制用例 + 自动抽样）
     ↓
-用例状态 + 追加式执行记录 + 过程事件 + 证据
-    ↓
-人工处理清单
+两阶段状态 + 追加式执行记录 + 报告 + 人工处理清单
 ```
 
-- 所有输入用例默认都进入 Browser 测试，不做前置分类。
-- MVP 只通过可见浏览器 UI 测试，不读取代码，不调用内部 API，不访问数据库。
-- 不设置独立的 Playwright 测试阶段；Cursor 原生 Browser 是当前执行入口。
+- 默认 `stage=auto`：全量快速验证后，约 50%～70% 的用例进入 Browser 验证；高风险、复杂、写操作和快速阶段异常用例强制进入。
+- `stage=all|fast|browser` 可覆盖默认流程；Playwright MCP 不可用时，自动模式可降级为全量 Browser 验证。
+- 不读取代码，不调用内部 API，不访问数据库，不执行页面任意 JavaScript。
 - AI 对每条用例给出 `passed`、`failed`、`blocked` 或 `inconclusive`，对外展示中文。
 - 是否需要人工处理由 Browser 结果决定；人工可以在结果出来后追加测试范围。
 - 测试用例只读；当前状态可更新；执行记录只追加、不覆盖。
-- 支持 `mode=normal|development`；开发模式增加过程日志，不改变测试行为和结论。
+- 支持 `mode=normal|development`；开发模式增加过程日志，不改变测试行为和结论。快速验证不保存截图，Browser 验证沿用既有截图策略。
 
-已确认、待实现的下一版本会增加“全量快速验证 + 部分 Browser 验证”的两阶段设计：默认 `stage=auto` 先通过 Playwright MCP 进行无截图的快速验证，再自动选择约 50%～70% 用例进入 Browser 验证。完整边界、降级和结果规则见[两阶段测试设计](docs/two-stage-design.md)。
+两阶段设计与当前实现边界见[两阶段测试设计](docs/two-stage-design.md)。该开发版本仍需在 Cursor 中安装 Playwright MCP 后进行真实回归。
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.7`：新增中文测试报告，状态表保持中文展示，并按模式区分截图；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。
+Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.3.0-dev.1`：增加 Playwright MCP 快速验证、自动 Browser 选择、两阶段状态与 Schema 5；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。两阶段能力尚待在 Cursor 中实际回归。
 
 更多设计与背景：
 

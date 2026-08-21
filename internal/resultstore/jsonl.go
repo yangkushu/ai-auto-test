@@ -247,6 +247,7 @@ func validateExecution(lineNumber int, object map[string]json.RawMessage, execut
 	attempt := requirePositiveInteger(lineNumber, "attempt", object, result)
 	requireStringAlias(lineNumber, []string{"runId", "run_id"}, object, result)
 	requireString(lineNumber, "status", object, result)
+	stage := optionalStage(lineNumber, object, result)
 
 	if executionID != "" {
 		if previous, exists := executionIDs[executionID]; exists {
@@ -256,12 +257,34 @@ func validateExecution(lineNumber int, object map[string]json.RawMessage, execut
 		}
 	}
 	if caseID != "" && attempt > 0 {
-		key := fmt.Sprintf("%s#%d", caseID, attempt)
+		key := fmt.Sprintf("%s#%s#%d", caseID, stage, attempt)
 		if previous, exists := caseAttempts[key]; exists {
 			result.Errors = append(result.Errors, fmt.Sprintf("line_%d: duplicate_case_attempt_%q_first_seen_line_%d", lineNumber, key, previous))
 		} else {
 			caseAttempts[key] = lineNumber
 		}
+	}
+}
+
+// optionalStage keeps Schema 1-4 execution histories valid. Schema 5 writers
+// must provide fast or browser; legacy records use a separate uniqueness scope.
+func optionalStage(lineNumber int, object map[string]json.RawMessage, result *Validation) string {
+	raw, exists := object["stage"]
+	if !exists {
+		return "legacy"
+	}
+
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("line_%d: invalid_stage", lineNumber))
+		return "invalid"
+	}
+	switch value {
+	case "fast", "browser":
+		return value
+	default:
+		result.Errors = append(result.Errors, fmt.Sprintf("line_%d: invalid_stage", lineNumber))
+		return "invalid"
 	}
 }
 

@@ -5,6 +5,8 @@
 | 配置项 | 值 |
 |---|---|
 | 测试环境 URL | `http://localhost:5174/admin/stores` |
+| stage | `auto` |
+| browser_coverage | `60%` |
 | mode | `normal` |
 | Preflight 成功标志 | `营销活动系统`、`安全登录总后台`、`门店管理` |
 | 允许复用已有会话 | 否 |
@@ -23,6 +25,7 @@
 ## 约束
 
 - 只通过可见浏览器 UI 测试；
+- `stage=auto` 需要在 Cursor 中安装并启用 Playwright MCP；不可用时可选择改为全量 Browser 验证；
 - 不读取或修改待测项目代码；
 - 不调用内部 API，不访问数据库；
 - 不新增、修改或删除业务数据；

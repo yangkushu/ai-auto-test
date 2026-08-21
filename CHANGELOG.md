@@ -1,5 +1,13 @@
 # 版本变更记录
 
+## 0.3.0-dev.1 - 2026-08-21
+
+- 增加 `stage=auto|all|fast|browser`；默认 `auto` 先通过 Playwright MCP 快速验证全部用例，再选择约 50%～70% 用例进行 Cursor Browser 验证；
+- 增加 Playwright MCP 前置检查、`auto` 降级到全量 Browser 验证和 Browser 选择原因；Skill 不自动修改用户 MCP 配置；
+- 结果 Schema 升级为 `5`：状态表增加快速验证、Browser 验证和自动化结论；执行记录增加 `stage=fast|browser`，attempt 唯一性升级为“用例 ID + stage + attempt”；
+- 快速验证禁止截图、视觉能力、网络/存储操作与任意 JavaScript；Browser 验证继续承担写操作、复杂交互和可见 UI 证据；
+- 禁止用替代 URL、页面或业务步骤判定来源用例通过。
+
 ## 0.2.0-dev.7 - 2026-08-21
 
 - 新增必需交付物 `测试报告.md`，以中文提供测试结论、范围、用例明细、人工处理、测试数据影响和证据/限制；

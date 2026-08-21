@@ -5,8 +5,9 @@
 - Cursor Desktop，使用 Agent Window；PoC 已在 Windows x64、Cursor 3.15.19 验证；
 - 可访问的测试环境和专用测试账号；
 - Cursor 原生 Browser 能力可用。
+- 使用 `stage=auto`、`stage=all` 或 `stage=fast` 时，Cursor 中还需安装并启用 Playwright MCP。
 
-首版随 Skill 交付 Windows x64 与 Linux x64 编译后的结果写入器，不要求安装 Go、Python、Node.js、npm、Playwright 或额外 Browser MCP。Git 仅用于克隆和更新项目，也可以直接下载仓库 ZIP。
+首版随 Skill 交付 Windows x64 与 Linux x64 编译后的结果写入器。最终使用者不需要在待测项目中安装 Go、Python、Node.js、npm 或 Playwright；Playwright MCP 由 Cursor 的 MCP 安装界面管理。Git 仅用于克隆和更新项目，也可以直接下载仓库 ZIP。
 
 ## 推荐：让 Cursor Agent 安装或更新
 
@@ -145,6 +146,16 @@ MCP server "cursor-ide-browser" not found
 说明 Cursor Browser 组件没有注册；停止测试，不要把业务用例标记为失败。PoC 中重新安装最新版 Cursor 后恢复。
 
 只有可见健康应用界面且匹配配置的成功标志才算通过。503、其他 4xx/5xx 或浏览器连接错误页必须得到运行级 `blocked`，不能进入业务用例。
+
+## Playwright MCP（快速验证）
+
+默认的 `stage=auto` 会先进行快速验证，因此需要在 Cursor 中安装并启用 Playwright MCP。请通过 Cursor 的 MCP 设置安装官方 Playwright MCP，重载 Cursor 或新建 Agent 会话后再运行 Skill。
+
+Skill 只检查 MCP 是否已经可用：不会自行安装 MCP、修改 MCP 配置，也不会要求在待测项目中安装 Node.js。如果 MCP 不可用：
+
+- `stage=fast` 或 `stage=all` 会停止，并提示安装后重试；
+- `stage=auto` 会让你选择“安装后重试”或“跳过第一阶段”；后者会记录原因并改为全量 Browser 验证；
+- `stage=browser` 只使用 Cursor 原生 Browser，不需要 Playwright MCP。
 
 ## 维护者构建
 
