@@ -56,16 +56,15 @@ Release 规则：
 
 ### 官方入口
 
-优先使用 Cursor 的官方 GitHub Skill 导入：
+优先让 Cursor Agent 根据 URL 安装：
 
-1. 打开 `Customize`；
-2. 进入 `Rules` 并选择 `Add Rule`；
-3. 选择 `Remote Rule (Github)`；
-4. 输入 `https://github.com/yangkushu/ai-auto-test`；
-5. 重载 Cursor 或新建 Agent 会话；
-6. 在 Skills 中确认 `execute-test-cases` 可见。
+```text
+安装或更新这个 Skill：https://github.com/yangkushu/ai-auto-test
+```
 
-Cursor 也会从项目级或用户级 `.agents/skills/` 自动发现 Skill。无法使用 UI 导入时，可以完整复制 `.agents/skills/execute-test-cases/`，但不能只复制 `SKILL.md`。
+Agent 必须下载完整仓库，将 `.agents/skills/execute-test-cases/` 整体复制到 `~/.agents/skills/execute-test-cases/`，并校验当前平台二进制 `version` 与 `VERSION` 一致。Windows x64 使用 `ai-auto-test-store-windows-amd64.exe`；Linux x64 使用 `ai-auto-test-store-linux-amd64`。二进制随该目录安装，不在用户机器编译，也不在测试运行时下载。
+
+Cursor 也会从项目级或用户级 `.agents/skills/` 自动发现 Skill。`Customize → Rules → Add Rule → Remote Rule (Github)` 是备选入口；若它没有安装完整 `bin/`，不能视为安装完成。
 
 ### 安装成功判定
 
@@ -86,7 +85,7 @@ Skill 自身在 Browser 启动前重复执行版本检查。检查失败时必�
 项目能保证的是：
 
 - 提供官方支持的 GitHub Skill 结构；
-- 提供不依赖用户语言运行时的全平台产物；
+- 提供不依赖用户语言运行时的 Windows/Linux x64 产物；
 - 提供明确且可自动检查的安装完成条件；
 - 失败时安全停止，不产生“Skill 已安装但运行时缺工具”的假成功。
 

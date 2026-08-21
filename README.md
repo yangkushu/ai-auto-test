@@ -48,13 +48,15 @@ Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也�
 
 ## 快速开始
 
-在 Cursor 中打开 `Customize → Rules → Add Rule → Remote Rule (Github)`，导入：
+在 Cursor Agent 中直接发送：
 
 ```text
-https://github.com/yangkushu/ai-auto-test
+安装或更新这个 Skill：https://github.com/yangkushu/ai-auto-test
 ```
 
-也可以克隆仓库后用 Cursor 打开，或把完整的 `.agents/skills/execute-test-cases/` 复制到用户级 `~/.agents/skills/`。不要只复制 `SKILL.md`，因为 Skill 还需要随包交付的平台二进制。完整步骤和安装验收见[安装说明](docs/installation.md)，需要让 Agent 代办时可使用[安装提示词](prompts/cursor-install-skill.md)。
+Agent 必须按仓库的安装合同，将完整的 `.agents/skills/execute-test-cases/` 安装到用户级 `~/.agents/skills/execute-test-cases/`；`bin/` 中的当前平台二进制必须随 Skill 一起安装，不能只复制 `SKILL.md`。完整步骤、更新规则和验收见[安装说明](docs/installation.md)，可直接复制的 Prompt 见[安装提示词](prompts/cursor-install-skill.md)。
+
+Cursor 的 `Customize → Rules → Add Rule → Remote Rule (Github)` 仍可作为备选导入方式，但不能代替“目录完整和二进制版本一致”的安装验收。
 
 首版运行时只依赖 Cursor 和随 Skill 交付的 `ai-auto-test-store` 可执行文件，不需要安装 Go、Python、Node.js、npm、Playwright 或额外 Browser MCP。
 
