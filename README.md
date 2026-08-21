@@ -4,6 +4,32 @@
 
 当前目标不是替代人工测试，也不是建立完整测试平台，而是先用 Cursor Agent 跑通一条可重复、可审计的最小流水线。
 
+## 快速开始
+
+### 安装
+
+在 Cursor 中直接执行：
+
+```text
+安装或更新这个 Skill：https://github.com/yangkushu/ai-auto-test
+```
+
+### 运行
+
+安装完成并新建 Agent 会话后，在 Cursor 中执行：
+
+```text
+/execute-test-cases 执行这个测试用例
+```
+
+`execute-test-cases` 为实际 Skill 名称。请在同一条消息中提供测试用例、测试环境 URL 和测试账号配置。
+
+## 详细说明
+
+- [安装说明](docs/installation.md)：安装验收、更新、二进制与平台支持。
+- [使用说明](docs/usage.md)：输入格式、开发模式、结果检查和恢复复测。
+- [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)：可复制的完整验证 Prompt。
+
 ## 当前 MVP
 
 ```text
@@ -30,38 +56,15 @@ Skill 内部调用 Cursor 原生 Browser
 
 Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.5`：增加分阶段前置检查（Preflight）诊断、测试数据副作用记录和 `self_check_finished` 事件约束；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。
 
-详见：
+更多设计与背景：
 
-- [安装说明](docs/installation.md)
-- [使用说明](docs/usage.md)
 - [当前 PoC 状态](docs/poc-status.md)
 - [MVP 方案](docs/方案.md)
 - [架构设计](docs/architecture.md)
 - [构建、分发与安装设计](docs/distribution.md)
 - [开源方案调研](docs/research/open-source-landscape.md)
-- [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)
 - [版本变更记录](CHANGELOG.md)
 
 ## 当前交付方向
 
 首版优先交付 Cursor Skill、Windows/Linux x64 静态结果写入器、输入模板和结果格式，不自研浏览器驱动。GitHub Actions 负责测试、双平台交叉编译和 tag Release；最终使用者不安装语言运行时。跑通完整闭环后，再评估 macOS/ARM64、Cursor/Agent Plugin、Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
-
-## 快速开始
-
-在 Cursor Agent 中直接发送：
-
-```text
-安装或更新这个 Skill：https://github.com/yangkushu/ai-auto-test
-```
-
-Agent 必须按仓库的安装合同，将完整的 `.agents/skills/execute-test-cases/` 安装到用户级 `~/.agents/skills/execute-test-cases/`；`bin/` 中的当前平台二进制必须随 Skill 一起安装，不能只复制 `SKILL.md`。完整步骤、更新规则和验收见[安装说明](docs/installation.md)，可直接复制的 Prompt 见[安装提示词](prompts/cursor-install-skill.md)。
-
-Cursor 的 `Customize → Rules → Add Rule → Remote Rule (Github)` 仍可作为备选导入方式，但不能代替“目录完整和二进制版本一致”的安装验收。
-
-首版运行时只依赖 Cursor 和随 Skill 交付的 `ai-auto-test-store` 可执行文件，不需要安装 Go、Python、Node.js、npm、Playwright 或额外 Browser MCP。
-
-测试开发模式时，直接选择 `/execute-test-cases`，或明确要求使用该 Skill，并提供：
-
-```text
-mode=development
-```
