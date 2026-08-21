@@ -36,7 +36,7 @@ cd ai-auto-test
 
 项目没有最终用户依赖安装步骤。下载完成后可以直接使用 Cursor 打开项目。
 
-仓库已经包含 Windows、macOS 和 Linux 的 x64/ARM64 `ai-auto-test-store`。Skill 会按当前平台选择对应文件并校验版本，不需要单独安装。
+仓库已经包含 Windows x64 与 Linux x64 的 `ai-auto-test-store`。Skill 会按当前平台选择对应文件并校验版本，不需要单独安装。macOS 和 ARM64 当前不受支持。
 
 ## 让 Cursor 发现本地 Skill
 
@@ -91,7 +91,7 @@ cp -R .agents/skills/execute-test-cases ~/.agents/skills/
 
 输出中的 `version` 应与同目录 `VERSION` 一致。
 
-macOS/Linux 应选择对应的 `darwin-*` 或 `linux-*` 文件。Skill 每次运行都会自动重复这项版本检查；缺文件、不可执行或版本不一致时，会在启动 Browser 前停止。
+Linux x64 应使用 `ai-auto-test-store-linux-amd64`。Skill 每次运行都会自动重复这项版本检查；macOS、ARM64、缺文件、不可执行或版本不一致时，会在启动 Browser 前停止。
 
 ## Browser Preflight
 
@@ -113,6 +113,6 @@ MCP server "cursor-ide-browser" not found
 ./scripts/build-result-store.sh
 ```
 
-该脚本使用 Go 标准库交叉编译六个平台文件；最终使用者不执行此步骤。
+该脚本使用 Go 标准库交叉编译 Windows x64 和 Linux x64 文件；最终使用者不执行此步骤。
 
-GitHub Actions 在 pull request 和 `main` push 时自动执行测试、静态检查、六平台构建与交付校验。推送与 `VERSION` 一致的 `v<version>` tag 后，会自动发布完整 Skill `tar.gz`、六个平台二进制和 `SHA256SUMS`。详见[构建、分发与安装设计](distribution.md)。
+GitHub Actions 在 pull request 和 `main` push 时自动执行测试、静态检查、双平台构建与交付校验。推送与 `VERSION` 一致的 `v<version>` tag 后，会自动发布完整 Skill `tar.gz`、两个平台二进制和 `SHA256SUMS`。详见[构建、分发与安装设计](distribution.md)。

@@ -1,5 +1,11 @@
 # 版本变更记录
 
+## 0.2.0-dev.4 - 2026-08-21
+
+- 首版二进制交付范围收敛为 Windows x64 与 Linux x64；
+- CI、Release、安装校验和 Skill 启动校验同步按双平台执行；
+- macOS 与 ARM64 支持延后至稳定回归后评估。
+
 ## 0.2.0-dev.3 - 2026-08-20
 
 - 将 `execute-test-cases` 设为唯一用户入口，由 Skill 内部调用 Cursor Browser；

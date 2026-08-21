@@ -4,7 +4,7 @@
 
 首版采用“GitHub Skill 仓库 + 随包静态二进制 + GitHub Release”的分发方式。最终使用者只依赖 Cursor；Go、shell 和 GitHub Actions 都是维护者侧构建工具，不是用户运行时依赖。
 
-Cursor 官方支持从 GitHub 仓库导入 Skill，并自动发现 `.agents/skills/`。因此仓库中的 `execute-test-cases` 必须始终是一个完整交付单元：`SKILL.md`、`VERSION`、Agent 元数据和六个平台的 `ai-auto-test-store` 缺一不可。
+Cursor 官方支持从 GitHub 仓库导入 Skill，并自动发现 `.agents/skills/`。因此仓库中的 `execute-test-cases` 必须始终是一个完整交付单元：`SKILL.md`、`VERSION`、Agent 元数据和两个已支持平台的 `ai-auto-test-store` 缺一不可。
 
 依据：[Cursor Agent Skills](https://cursor.com/docs/skills)、[GitHub Actions 构建与测试 Go](https://docs.github.com/en/actions/tutorials/build-and-test-code/go)、[GitHub Release 完整性校验](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/verify-release-integrity)。
 
@@ -14,16 +14,16 @@ Cursor 官方支持从 GitHub 仓库导入 Skill，并自动发现 `.agents/skil
 Git 源码
   ├─ Skill 说明与版本
   ├─ Go CLI 源码和测试
-  └─ 六个平台的预编译 CLI
+  └─ 两个平台的预编译 CLI
           ↓ push / pull request
 GitHub Actions
   ├─ go test / go vet
-  ├─ 交叉编译 Windows、Linux、macOS 的 x64/ARM64
+  ├─ 交叉编译 Windows x64、Linux x64
   └─ 校验 Skill 交付文件
           ↓ version tag
 GitHub Release
   ├─ 完整 Skill tar.gz
-  ├─ 六个平台独立二进制
+  ├─ 两个平台独立二进制
   └─ SHA256SUMS
 ```
 
@@ -32,11 +32,7 @@ GitHub Release
 | OS | Architecture | 文件 |
 |---|---|---|
 | Windows | x64 | `ai-auto-test-store-windows-amd64.exe` |
-| Windows | ARM64 | `ai-auto-test-store-windows-arm64.exe` |
 | Linux | x64 | `ai-auto-test-store-linux-amd64` |
-| Linux | ARM64 | `ai-auto-test-store-linux-arm64` |
-| macOS | Intel | `ai-auto-test-store-darwin-amd64` |
-| macOS | Apple Silicon | `ai-auto-test-store-darwin-arm64` |
 
 CLI 只使用 Go 标准库并设置 `CGO_ENABLED=0`，不依赖 Node.js、Python、PowerShell、动态 C 库或用户机器上的 Go 工具链。
 
@@ -44,17 +40,17 @@ CLI 只使用 Go 标准库并设置 `CGO_ENABLED=0`，不依赖 Node.js、Python
 
 ## CI 与 Release
 
-`.github/workflows/ci-release.yml` 在 pull request 和 `main` push 时执行测试、静态检查、六目标构建、随仓二进制一致性检查和交付检查。推送与 `VERSION` 一致的 `v<version>` tag 后，工作流额外创建 GitHub Release。
+`.github/workflows/ci-release.yml` 在 pull request 和 `main` push 时执行测试、静态检查、双目标构建、随仓二进制一致性检查和交付检查。推送与 `VERSION` 一致的 `v<version>` tag 后，工作流额外创建 GitHub Release。
 
 Release 规则：
 
 1. `VERSION` 使用 Semantic Versioning；候选版本允许 `-dev.N`、`-rc.N`；
 2. tag 必须严格等于 `v` 加 `VERSION`，否则发布失败；
 3. Release 包由 tag 对应源码重新构建，不复用开发者机器产物；
-4. Release 同时发布完整 Skill `tar.gz`、六个平台二进制和 `SHA256SUMS`；
+4. Release 同时发布完整 Skill `tar.gz`、两个平台二进制和 `SHA256SUMS`；
 5. 正式发布前必须在至少 Windows x64 和当前开发平台做 Cursor 回归。
 
-仓库内预编译二进制服务于 Cursor 的 GitHub Skill 直接导入；Release 资产服务于不可变版本归档、校验和手动恢复。二者版本都必须与 `VERSION` 一致。
+仓库内预编译二进制服务于 Cursor 的 GitHub Skill 直接导入；Release 资产服务于不可变版本归档、校验和手动恢复。二者版本都必须与 `VERSION` 一致。macOS 和 ARM64 当前不受支持，Skill 必须安全停止并说明该限制。
 
 ## Cursor 安装合同
 

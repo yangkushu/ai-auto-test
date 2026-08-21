@@ -7,11 +7,7 @@ version=$(tr -d '\r\n' < "$skill_dir/VERSION")
 
 for target in \
     windows-amd64.exe \
-    windows-arm64.exe \
-    linux-amd64 \
-    linux-arm64 \
-    darwin-amd64 \
-    darwin-arm64
+    linux-amd64
 do
     file="$skill_dir/bin/ai-auto-test-store-$target"
     if [ ! -s "$file" ]; then

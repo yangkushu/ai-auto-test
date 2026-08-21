@@ -28,7 +28,7 @@ Skill 内部调用 Cursor 原生 Browser
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.3`：增加严格输入校验、应用健康 Preflight，以及跨平台编译型结果写入器，修复 503 被当作 Preflight 成功和 JSONL 被 Agent 拼坏的问题。
+Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.4`：增加严格输入校验、应用健康 Preflight，以及 Windows/Linux x64 的编译型结果写入器，修复 503 被当作 Preflight 成功和 JSONL 被 Agent 拼坏的问题。
 
 详见：
 
@@ -44,7 +44,7 @@ Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也�
 
 ## 当前交付方向
 
-首版优先交付 Cursor Skill、跨平台静态结果写入器、输入模板和结果格式，不自研浏览器驱动。GitHub Actions 负责测试、六平台交叉编译和 tag Release；最终使用者不安装语言运行时。跑通完整闭环后，再评估 Cursor/Agent Plugin、Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
+首版优先交付 Cursor Skill、Windows/Linux x64 静态结果写入器、输入模板和结果格式，不自研浏览器驱动。GitHub Actions 负责测试、双平台交叉编译和 tag Release；最终使用者不安装语言运行时。跑通完整闭环后，再评估 macOS/ARM64、Cursor/Agent Plugin、Excel/飞书适配、其他 Agent 平台、代码与数据库只读上下文以及独立服务化。
 
 ## 快速开始
 

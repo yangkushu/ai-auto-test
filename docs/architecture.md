@@ -55,9 +55,9 @@ read-only test cases → Cursor orchestration Skill
 
 ## 构建与分发架构
 
-运行架构与构建架构分离：Cursor 和静态 CLI 属于用户运行时；Go、shell 构建脚本和 GitHub Actions 只属于维护者侧。CI 在 Linux runner 上使用 Go 交叉编译 Windows、Linux、macOS 的 x64/ARM64 六个目标，因此 CI 使用 shell 不会给最终用户引入 shell 或 PowerShell 依赖。
+运行架构与构建架构分离：Cursor 和静态 CLI 属于用户运行时；Go、shell 构建脚本和 GitHub Actions 只属于维护者侧。CI 在 Linux runner 上使用 Go 交叉编译 Windows x64 和 Linux x64 两个目标，因此 CI 使用 shell 不会给最终用户引入 shell 或 PowerShell 依赖。
 
-仓库中的 `.agents/skills/execute-test-cases/` 是 Cursor GitHub 导入所需的完整交付单元，包含六个平台二进制。每次 push 都重新构建和检查；版本 tag 还会生成不可变 GitHub Release、完整 Skill ZIP、独立平台文件和 SHA-256 清单。
+仓库中的 `.agents/skills/execute-test-cases/` 是 Cursor GitHub 导入所需的完整交付单元，包含 Windows x64 和 Linux x64 二进制。每次 push 都重新构建和检查；版本 tag 还会生成不可变 GitHub Release、完整 Skill `tar.gz`、独立平台文件和 SHA-256 清单。
 
 安装采用两级策略：MVP 使用 Cursor 官方 GitHub Skill 导入或本地 `.agents/skills/` 发现；稳定后增加 Agent Plugin/Cursor Marketplace 作为一键安装与更新通道。自由文本要求 Agent 安装 URL 只能触发这个流程，不能取代安装后的目录、版本和 Skill 发现校验。完整设计见[构建、分发与安装设计](distribution.md)。
 
@@ -188,4 +188,4 @@ MVP 不在执行前为用例分类人工阶段。Browser 执行完成后：
 10. 待验证：突然崩溃后能自动重建状态；
 11. 后续评估：是否需要把当前 JSONL CLI 扩展为完整的跨文件确定性校验器。
 12. 待验证：从 GitHub Remote Rule 导入完整 Skill 后，Windows x64 能发现 Skill 并执行随包 CLI；
-13. 已实现、待线上验收：GitHub Actions 六平台构建和 tag Release。
+13. 已实现、待线上验收：GitHub Actions Windows/Linux x64 构建和 tag Release。

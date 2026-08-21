@@ -42,7 +42,7 @@ description: 使用 Cursor Agent Window 原生 Browser 执行已有的 Web 正�
 
 读取本 Skill 同目录的 `VERSION` 作为 `skill_version`，使用 `schema_version=1`。开始前回显并在 `summary.md` 中记录最终生效的运行模式、Skill 版本和结果 Schema 版本。
 
-根据 Cursor 所在平台选择本 Skill `bin/ai-auto-test-store-<os>-<arch>[.exe]`。运行其 `version` 命令，要求输出版本与 `skill_version` 一致；缺失、无法执行或版本不一致时在启动 Browser 前停止。使用者不需要安装 Go、Python、Node.js 或 PowerShell。
+仅支持 Windows x64 和 Linux x64。根据 Cursor 所在平台选择 `bin/ai-auto-test-store-windows-amd64.exe` 或 `bin/ai-auto-test-store-linux-amd64`，运行其 `version` 命令并要求输出版本与 `skill_version` 一致；其他 OS/Architecture、文件缺失、无法执行或版本不一致时在启动 Browser 前停止。使用者不需要安装 Go、Python、Node.js 或 PowerShell。
 
 ## 创建运行记录
 

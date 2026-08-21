@@ -35,8 +35,4 @@ build_target() {
 }
 
 build_target windows amd64 .exe
-build_target windows arm64 .exe
 build_target linux amd64 ''
-build_target linux arm64 ''
-build_target darwin amd64 ''
-build_target darwin arm64 ''
