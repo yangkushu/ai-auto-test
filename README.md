@@ -11,7 +11,7 @@
 在 Cursor 中直接执行：
 
 ```text
-安装或更新这个 Skill：https://github.com/yangkushu/ai-auto-test
+安装或更新这个 Skill，并严格按安装说明操作：https://github.com/yangkushu/ai-auto-test/blob/master/docs/installation.md
 ```
 
 ### 运行
