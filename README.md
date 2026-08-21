@@ -32,7 +32,7 @@
 - [使用说明](docs/usage.md)：输入格式、开发模式、结果检查和恢复复测。
 - [两用例闭环验证提示词](prompts/cursor-closed-loop-validation.md)：可复制的完整验证 Prompt。
 
-## 当前 MVP
+## 当前已实现 MVP
 
 ```text
 只读测试用例
@@ -53,6 +53,8 @@ Skill 内部调用 Cursor 原生 Browser
 - 是否需要人工处理由 Browser 结果决定；人工可以在结果出来后追加测试范围。
 - 测试用例只读；当前状态可更新；执行记录只追加、不覆盖。
 - 支持 `mode=normal|development`；开发模式增加过程日志，不改变测试行为和结论。
+
+已确认、待实现的下一版本会增加“全量快速验证 + 部分 Browser 验证”的两阶段设计：默认 `stage=auto` 先通过 Playwright MCP 进行无截图的快速验证，再自动选择约 50%～70% 用例进入 Browser 验证。完整边界、降级和结果规则见[两阶段测试设计](docs/two-stage-design.md)。
 
 ## 当前进度
 

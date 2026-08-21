@@ -4,6 +4,8 @@
 
 MVP 是 Cursor-first 的测试编排 Skill，不自研浏览器驱动。用户直接调用 `execute-test-cases`；Skill 负责读取用例和控制顺序，在内部调用 Cursor 原生 Browser，并使用随包交付的 CLI 写入关键结果。
 
+当前实现是单阶段 Cursor Browser。已确认、待实现的两阶段架构使用 Playwright MCP 进行无截图快速验证，并保留 Cursor 原生 Browser 作为可见 UI 验证层；它不应被误认为当前已发布能力，详见[两阶段测试设计](two-stage-design.md)。
+
 ```text
 run config ───────────────┐
                          ▼
