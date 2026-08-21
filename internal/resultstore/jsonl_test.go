@@ -83,6 +83,34 @@ func TestAppendRejectsMultipleJSONValues(t *testing.T) {
 	}
 }
 
+func TestEventValidationRejectsDeprecatedSelfCheckEvent(t *testing.T) {
+	data := []byte(`{"time":"2026-08-21T12:00:00+08:00","skill_version":"0.2.0-dev.5","schema_version":2,"run_id":"run-1","mode":"development","event":"self_check"}` + "\n")
+	validation := Validate(data, KindEvents)
+	if validation.OK {
+		t.Fatal("expected deprecated event to be rejected")
+	}
+	joined := strings.Join(validation.Errors, ";")
+	if !strings.Contains(joined, "deprecated_event_self_check_use_self_check_finished") {
+		t.Fatalf("unexpected errors: %v", validation.Errors)
+	}
+}
+
+func TestEventValidationAcceptsLegacySelfCheckEvent(t *testing.T) {
+	data := []byte(`{"time":"2026-08-20T12:00:00+08:00","skill_version":"0.2.0-dev.4","schema_version":1,"run_id":"run-1","mode":"development","event":"self_check"}` + "\n")
+	validation := Validate(data, KindEvents)
+	if !validation.OK {
+		t.Fatalf("legacy schema should remain valid: %v", validation.Errors)
+	}
+}
+
+func TestEventValidationAcceptsSelfCheckFinished(t *testing.T) {
+	data := []byte(`{"time":"2026-08-21T12:00:00+08:00","skill_version":"0.2.0-dev.5","schema_version":2,"run_id":"run-1","mode":"development","event":"self_check_finished"}` + "\n")
+	validation := Validate(data, KindEvents)
+	if !validation.OK {
+		t.Fatalf("unexpected errors: %v", validation.Errors)
+	}
+}
+
 func TestAppendRejectsDuplicateExecutionBeforeWrite(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "executions.jsonl")

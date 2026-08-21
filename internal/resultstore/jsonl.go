@@ -220,7 +220,25 @@ func validateEvent(lineNumber int, object map[string]json.RawMessage, result *Va
 	requireNumber(lineNumber, "schema_version", object, result)
 	requireString(lineNumber, "run_id", object, result)
 	requireString(lineNumber, "mode", object, result)
-	requireString(lineNumber, "event", object, result)
+	event := requireString(lineNumber, "event", object, result)
+	if event == "self_check" && schemaVersionAtLeast(object, 2) {
+		result.Errors = append(result.Errors, fmt.Sprintf("line_%d: deprecated_event_self_check_use_self_check_finished", lineNumber))
+	}
+}
+
+// schemaVersionAtLeast preserves validation of historical result files. Schema 1
+// used self_check; schema 2 makes self_check_finished the canonical event name.
+func schemaVersionAtLeast(object map[string]json.RawMessage, minimum int) bool {
+	raw, exists := object["schema_version"]
+	if !exists {
+		return false
+	}
+
+	var version int
+	if err := json.Unmarshal(raw, &version); err != nil {
+		return false
+	}
+	return version >= minimum
 }
 
 func validateExecution(lineNumber int, object map[string]json.RawMessage, executionIDs, caseAttempts map[string]int, result *Validation) {

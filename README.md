@@ -28,7 +28,7 @@ Skill 内部调用 Cursor 原生 Browser
 
 ## 当前进度
 
-Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.4`：增加严格输入校验、应用健康 Preflight，以及 Windows/Linux x64 的编译型结果写入器，修复 503 被当作 Preflight 成功和 JSONL 被 Agent 拼坏的问题。
+Cursor 原生 Browser 的核心可行性已经验证，`execute-test-cases` 也已能作为独立入口调用 Browser。当前开发版本为 `0.2.0-dev.5`：增加分阶段前置检查（Preflight）诊断、测试数据副作用记录和 `self_check_finished` 事件约束；Windows/Linux x64 的编译型结果写入器继续防止 JSONL 被 Agent 拼坏。
 
 详见：
 

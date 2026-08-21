@@ -33,7 +33,7 @@ examples/closed-loop/run-config.example.md
 - 运行配置：examples/closed-loop/run-config.local.md
 - 测试用例：examples/closed-loop/test-cases.md
 
-先执行 Browser Preflight。只通过可见浏览器 UI 测试，不读取代码、API 或数据库，不在结果中记录凭据。每条完成后先追加执行记录，再更新状态，最后重新读取结果文件完成一致性自检。
+先按输入校验、Browser 能力、目标导航和应用识别执行分阶段前置检查（Preflight）。只通过可见浏览器 UI 测试，不读取代码、API 或数据库，不在结果中记录凭据。Preflight 失败时以“事实、推断、建议”说明问题，业务用例保持 `pending`。每条完成后先追加执行记录，再更新状态，最后重新读取结果文件完成一致性自检。
 ```
 
 Skill 默认输出：
@@ -54,7 +54,7 @@ Browser 由 Skill 内部调用。不要手动选择 `/use-browser`；否则只�
 Skill 使用随包交付的 `ai-auto-test-store` 初始化、写入和校验两个 JSONL，再执行跨文件检查：
 
 - 必需文件和 CSV 表头；
-- 状态值、时间和 `manual_required`；
+- 状态值、时间、`manual_required`、`cleanup_required` 和 `cleanup_status`；
 - JSONL 可解析性、唯一 execution ID 和连续 attempt；
 - “用例 ID + attempt”组合唯一；
 - 事件中的 Skill 版本、Schema 版本、run ID、模式和关键写入顺序；
@@ -66,7 +66,7 @@ Skill 使用随包交付的 `ai-auto-test-store` 初始化、写入和校验两�
 
 自检结论写入 `summary.md`。正常完成必须满足 `self_check=passed`、`run_valid=true`。CLI 校验失败、execution ID 重复、“用例 ID + attempt”重复、状态指针错误或开发步骤事件缺失属于硬失败，必须标记 `self_check=failed`、`run_valid=false`，不能只写 warning。Agent 只能根据唯一追加历史重建状态和汇总，禁止修改旧执行记录；不能安全修复时保留原始 run，并进入运行级人工处理。
 
-当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。
+当前 Skill 版本读取自 `.agents/skills/execute-test-cases/VERSION`。`summary.md` 和每条运行事件都必须记录 `skill_version`、`schema_version` 和 `mode`。Schema 2 的事件必须使用 `self_check_finished`，不能使用已废弃的 `self_check`；Schema 1 的历史结果可校验但不能在 Schema 2 下恢复追加。人类可读的 summary、事件消息、观察和建议使用中文；代码、URL、机器字段与原始页面证据保持原样。
 
 ## 4. 恢复与复测
 
